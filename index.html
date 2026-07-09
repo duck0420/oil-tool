@@ -225,7 +225,17 @@ body{font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',system-ui,sans-se
 <input type="number" id="rateCar" step="0.1" value="8" onchange="saveCfg()" style="margin-bottom:12px">
 <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">自訂假日 (YYYY-MM-DD，逗號分隔)</label>
 <input type="text" id="customHolidays" placeholder="2026-07-10,2026-07-15" onchange="saveCfg()" style="margin-bottom:12px">
-<div class="btn-row">
+<hr style="border-color:var(--border);margin:12px 0">
+<h3 style="font-size:0.9rem;margin-bottom:6px">☁️ 跨裝置同步 (GitHub)</h3>
+<label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:4px">GitHub Token（所有裝置輸入相同 Token）</label>
+<input type="password" id="ghToken" placeholder="ghp_..." onchange="saveSyncCfg()" style="margin-bottom:8px;font-size:0.8rem">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+  <button class="btn btn-sm btn-outline" id="syncToggleBtn" onclick="toggleSync()" style="font-size:0.75rem">🔗 啟用同步</button>
+  <span id="syncStatus" style="font-size:0.7rem;color:var(--muted)"></span>
+</div>
+<button class="btn btn-sm btn-outline" onclick="pullFromGitHub().then(ok=>{if(ok){renderCalendar();renderEditor();toast('✅ 已從雲端同步');}else{toast('⚠️ 同步失敗，檢查 Token','error');}})" style="font-size:0.75rem;margin-top:4px">⬇️ 立即從雲端拉取</button>
+<p style="font-size:0.65rem;color:var(--muted);margin-top:6px">💡 Token 只需 repo 權限。每台裝置輸入相同 Token 即可自動同步。</p>
+<div class="btn-row" style="margin-top:12px">
   <button class="btn btn-sm btn-primary" onclick="closeSettings()">完成</button>
   <button class="btn btn-sm btn-danger" onclick="clearAll()">⚠️ 清除資料</button>
 </div>
@@ -285,12 +295,85 @@ let curY = new Date().getFullYear(), curM = new Date().getMonth();
 let selDate = todayStr();
 let selData = null; // {enabled, segments:[{from,to,km,cat,v}]}
 
-// ============ DATA STORE ============
+// ============ DATA STORE (localStorage + GitHub Sync) ============
+const GITHUB_REPO = 'duck0420/oil-tool';
+const GITHUB_API = 'https://api.github.com';
+
 function dbKey() { return `oil_${curY}-${String(curM+1).padStart(2,'0')}`; }
 function loadMonth() { try{return JSON.parse(localStorage.getItem(dbKey())||'{}');}catch(e){return {};} }
-function saveMonth(data) { localStorage.setItem(dbKey(), JSON.stringify(data)); }
+function saveMonth(data) { localStorage.setItem(dbKey(), JSON.stringify(data)); syncToGitHub(); }
 function loadCfg() { try{return JSON.parse(localStorage.getItem('oil_cfg')||'{}');}catch(e){return {};} }
-function saveCfgData(d) { localStorage.setItem('oil_cfg', JSON.stringify(d)); }
+function saveCfgData(d) { localStorage.setItem('oil_cfg', JSON.stringify(d)); syncCfgToGitHub(); }
+
+// ==== GitHub Cloud Sync ====
+let _syncTimer = null;
+
+function getGitHubToken() {
+  return localStorage.getItem('oil_gh_token') || '';
+}
+
+function isSyncEnabled() {
+  return localStorage.getItem('oil_sync_enabled') === 'true' && !!getGitHubToken();
+}
+
+async function syncToGitHub() {
+  if (!isSyncEnabled()) return;
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => _doSync(), 800);
+}
+
+async function syncCfgToGitHub() {
+  if (!isSyncEnabled()) return;
+  await _doSync();
+}
+
+async function _doSync() {
+  const token = getGitHubToken();
+  if (!token) return;
+  try {
+    // Collect all localStorage oil_ data + cfg
+    const all = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k.startsWith('oil_')) all[k] = JSON.parse(localStorage.getItem(k));
+    }
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(all))));
+    
+    // Get existing file SHA
+    let sha = '';
+    try {
+      const getResp = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
+        headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' }
+      });
+      if (getResp.ok) { const d = await getResp.json(); sha = d.sha; }
+    } catch(e) {}
+
+    // Put file
+    const body = JSON.stringify({ message: 'sync data', content, sha: sha || undefined, branch: 'main' });
+    await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github+json' },
+      body
+    });
+  } catch(e) { console.log('sync failed:', e); }
+}
+
+async function pullFromGitHub() {
+  const token = getGitHubToken();
+  if (!token) return false;
+  try {
+    const resp = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' }
+    });
+    if (!resp.ok) return false;
+    const d = await resp.json();
+    const all = JSON.parse(decodeURIComponent(escape(atob(d.content))));
+    for (const [k, v] of Object.entries(all)) {
+      localStorage.setItem(k, JSON.stringify(v));
+    }
+    return true;
+  } catch(e) { console.log('pull failed:', e); return false; }
+}
 
 function getDay(date) {
   const month = loadMonth();
@@ -602,6 +685,8 @@ function showSettings() {
   document.getElementById('rateBike').value=cfg.rateBike||4;
   document.getElementById('rateCar').value=cfg.rateCar||8;
   document.getElementById('customHolidays').value=(cfg.customHolidays||[]).join(',');
+  document.getElementById('ghToken').value = getGitHubToken();
+  updateSyncUI();
   document.getElementById('settingsModal').classList.remove('hidden');
 }
 function closeSettings(){document.getElementById('settingsModal').classList.add('hidden');renderStats();}
@@ -612,6 +697,24 @@ function saveCfg(){
     customHolidays:document.getElementById('customHolidays').value.split(',').map(s=>s.trim()).filter(Boolean)
   });
   renderStats();
+}
+function saveSyncCfg(){
+  localStorage.setItem('oil_gh_token', document.getElementById('ghToken').value);
+  updateSyncUI();
+}
+function toggleSync(){
+  const cur = localStorage.getItem('oil_sync_enabled') === 'true';
+  localStorage.setItem('oil_sync_enabled', cur ? 'false' : 'true');
+  updateSyncUI();
+  if(!cur) syncToGitHub(); // push immediately when enabling
+}
+function updateSyncUI(){
+  const enabled = isSyncEnabled();
+  const hasToken = !!getGitHubToken();
+  document.getElementById('syncToggleBtn').textContent = enabled ? '🔗 同步已啟用' : '🔗 啟用同步';
+  document.getElementById('syncToggleBtn').style.background = enabled ? 'var(--green)' : '';
+  document.getElementById('syncToggleBtn').style.color = enabled ? '#fff' : '';
+  document.getElementById('syncStatus').textContent = enabled ? '✅ 自動同步中' : (hasToken ? '已輸入 Token' : '請輸入 Token');
 }
 function clearAll(){
   if(!confirm('確定清除所有資料？'))return;
@@ -635,9 +738,15 @@ function toast(msg,type='') {
 }
 
 // ============ INIT ============
-selData=getDay(selDate);
-renderCalendar();
-renderEditor();
+(async function(){
+  if(isSyncEnabled()) {
+    const ok = await pullFromGitHub();
+    if(ok) console.log('synced from cloud');
+  }
+  selData=getDay(selDate);
+  renderCalendar();
+  renderEditor();
+})();
 </script>
 </body>
 </html>
