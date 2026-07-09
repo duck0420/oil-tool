@@ -191,6 +191,7 @@ body{font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',system-ui,sans-se
       <button class="toggle on" id="dayToggle" onclick="toggleDay()"></button>
     </div>
   </div>
+  <div id="dayVehicleRow" style="margin-bottom:10px"></div>
   <div id="segmentsList"></div>
   <div class="btn-row">
     <button class="btn btn-sm btn-outline" onclick="addSegment('end')">➕ 加入終點</button>
@@ -247,18 +248,18 @@ body{font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',system-ui,sans-se
 // ============ DATA ============
 const APPLICANT = '吳仕緯';
 
-// Default daily template (from original Excel)
+// Default daily template (from original Excel) — vehicle is set per-day, default 汽車
 const TEMPLATE = [
-  {from:'台中分公司',to:'關務署台中關',km:20.2,cat:'總部至海關文件',v:'機車'},
-  {from:'關務署台中關',to:'陽明海運梧棲辦公室',km:3.4,cat:'查看有無文件可取回',v:'機車'},
-  {from:'陽明海運梧棲辦公室',to:'安舫船務',km:1,cat:'查看有無文件可取回',v:'機車'},
-  {from:'安舫船務',to:'建中船務',km:0.52,cat:'查看有無文件可取回',v:'機車'},
-  {from:'建中船務',to:'龍鑫船務',km:0.06,cat:'查看有無文件可取回',v:'機車'},
-  {from:'龍鑫船務',to:'國耀船務',km:1.1,cat:'查看有無文件可取回',v:'機車'},
-  {from:'國耀船務',to:'顗泰船務',km:2,cat:'查看有無文件可取回',v:'機車'},
-  {from:'顗泰船務',to:'關務署台中關',km:2,cat:'查看有無文件可取回',v:'機車'},
-  {from:'關務署台中關',to:'中國貨櫃',km:7.2,cat:'櫃場作業',v:'機車'},
-  {from:'中國貨櫃',to:'關務署台中關',km:7.2,cat:'回海關',v:'機車'},
+  {from:'台中分公司',to:'關務署台中關',km:22.5,cat:'總部至海關文件'},
+  {from:'關務署台中關',to:'陽明海運梧棲辦公室',km:4,cat:'查看有無文件可取回'},
+  {from:'陽明海運梧棲辦公室',to:'安舫船務',km:1.2,cat:'查看有無文件可取回'},
+  {from:'安舫船務',to:'建中船務',km:0.7,cat:'查看有無文件可取回'},
+  {from:'建中船務',to:'龍鑫船務',km:0.1,cat:'查看有無文件可取回'},
+  {from:'龍鑫船務',to:'國耀船務',km:1.5,cat:'查看有無文件可取回'},
+  {from:'國耀船務',to:'顗泰船務',km:2.5,cat:'查看有無文件可取回'},
+  {from:'顗泰船務',to:'關務署台中關',km:2.5,cat:'查看有無文件可取回'},
+  {from:'關務署台中關',to:'中國貨櫃',km:8.5,cat:'櫃場作業'},
+  {from:'中國貨櫃',to:'關務署台中關',km:8.5,cat:'回海關'},
 ];
 
 // Mileage DB
@@ -384,7 +385,7 @@ function getDay(date) {
   const isWeekend = dow===0||dow===6;
   const isHoliday = !!TW_HOLIDAYS[date];
   const enabled = !isWeekend && !isHoliday;
-  return {enabled, segments: enabled ? JSON.parse(JSON.stringify(TEMPLATE)) : []};
+  return {enabled, vehicle:'汽車', segments: enabled ? JSON.parse(JSON.stringify(TEMPLATE)) : []};
 }
 
 function setDay(date, data) {
@@ -451,15 +452,24 @@ function renderEditor() {
   const toggle = document.getElementById('dayToggle');
   toggle.className = 'toggle' + (selData.enabled?' on':'');
   
+  // Daily vehicle
+  const vehHtml = document.getElementById('dayVehicleRow');
+  if(vehHtml) {
+    const dv = selData.vehicle || '汽車';
+    vehHtml.innerHTML = `<span style="font-size:0.8rem;color:var(--muted)">交通工具：</span>
+      <button class="vehicle-btn car${dv==='汽車'?' active':''}" onclick="setDayVehicle('汽車')" style="padding:5px 16px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:0.8rem;background:${dv==='汽車'?'var(--car)':'var(--card)'};color:${dv==='汽車'?'#fff':'var(--text)'};transition:0.15s">🚗 汽車</button>
+      <button class="vehicle-btn bike${dv==='機車'?' active':''}" onclick="setDayVehicle('機車')" style="padding:5px 16px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:0.8rem;background:${dv==='機車'?'var(--bike)':'var(--card)'};color:${dv==='機車'?'#fff':'var(--text)'};margin-left:4px;transition:0.15s">🏍️ 機車</button>`;
+  }
+  
   const list = document.getElementById('segmentsList');
   if(!selData.segments || selData.segments.length===0) {
     list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:0.85rem">本日無行程（休假或假日）</div>';
     return;
   }
   
+  const dv = selData.vehicle || '汽車';
   let html='';
   selData.segments.forEach((s,i)=>{
-    // Insert button before first segment
     if(i===0) html+=`<button class="insert-btn" onclick="addSegment(0)">＋ 在此前插入</button>`;
     
     html+=`<div class="segment">
@@ -469,15 +479,10 @@ function renderEditor() {
         <select onchange="updateSeg(${i},'to',this.value)">${locOpts(s.to)}</select>
         <input class="seg-km" type="number" step="0.01" value="${s.km}" onchange="updateSeg(${i},'km',parseFloat(this.value)||0)" title="里程">
         <select class="seg-cat" onchange="updateSeg(${i},'cat',this.value)">${catOpts(s.cat)}</select>
-        <select class="seg-cat" onchange="updateSeg(${i},'v',this.value)" style="width:60px">
-          <option value="機車" ${s.v==='機車'?'selected':''}>🏍️</option>
-          <option value="汽車" ${s.v==='汽車'?'selected':''}>🚗</option>
-        </select>
       </div>
       <button class="del-btn" onclick="removeSeg(${i})">✕</button>
     </div>`;
     
-    // Insert button after
     html+=`<button class="insert-btn" onclick="addSegment(${i+1})">＋ 在此後插入</button>`;
   });
   list.innerHTML=html;
@@ -491,14 +496,23 @@ function updateSeg(idx, field, val) {
   // Auto mileage if from+to changed
   if(field==='from'||field==='to') {
     const s = selData.segments[idx];
+    const dv = selData.vehicle || '汽車';
     const m = MILEAGE[`${s.from}|${s.to}`];
-    if(m && m[s.v]) s.km = m[s.v];
+    if(m && m[dv]) s.km = m[dv];
   }
-  if(field==='v') {
-    const s = selData.segments[idx];
+  setDay(selDate, selData);
+  selData = getDay(selDate);
+  renderEditor();
+  renderCalendar();
+}
+
+function setDayVehicle(v) {
+  selData.vehicle = v;
+  // Update all segment mileages to match new vehicle
+  selData.segments.forEach(s => {
     const m = MILEAGE[`${s.from}|${s.to}`];
-    if(m && m[s.v]) s.km = m[s.v];
-  }
+    if(m && m[v]) s.km = m[v];
+  });
   setDay(selDate, selData);
   selData = getDay(selDate);
   renderEditor();
@@ -508,7 +522,7 @@ function updateSeg(idx, field, val) {
 function addSegment(atIdx) {
   if(!selData.segments) selData.segments = [];
   if(!selData.enabled) { selData.enabled=true; }
-  const s = {from:'',to:'',km:0,cat:'查看有無文件可取回',v:'機車'};
+  const s = {from:'',to:'',km:0,cat:'查看有無文件可取回'};
   if(atIdx===undefined || atIdx>=selData.segments.length) {
     if(selData.segments.length>0) s.from = selData.segments[selData.segments.length-1].to;
     selData.segments.push(s);
@@ -544,6 +558,7 @@ function toggleDay() {
   selData.enabled = !selData.enabled;
   if(selData.enabled && (!selData.segments||selData.segments.length===0)) {
     selData.segments = JSON.parse(JSON.stringify(TEMPLATE));
+    selData.vehicle = '汽車';
   }
   setDay(selDate, selData);
   selData = getDay(selDate);
@@ -553,20 +568,25 @@ function toggleDay() {
 
 // ============ STATS ============
 function renderStats() {
-  const month = loadMonth();
+  const y=curY, m=curM;
+  const daysInMonth = new Date(y,m+1,0).getDate();
   let totalKm=0, bikeKm=0, carKm=0, workDays=0, tripSegs=0;
   const cfg = loadCfg();
   const rBike = parseFloat(cfg.rateBike||4), rCar = parseFloat(cfg.rateCar||8);
   
-  for(const [date, data] of Object.entries(month)) {
-    if(!data.enabled || !data.segments) continue;
-    const dow = new Date(date).getDay();
+  for(let d=1;d<=daysInMonth;d++){
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(y,m,d).getDay();
     if(dow===0||dow===6) continue;
+    if(TW_HOLIDAYS[ds]) continue;
+    const data = getDay(ds);
+    if(!data.enabled || !data.segments) continue;
     workDays++;
+    const v = data.vehicle || '汽車';
     data.segments.forEach(s=>{
       tripSegs++;
       totalKm+=s.km;
-      if(s.v==='機車') bikeKm+=s.km; else carKm+=s.km;
+      if(v==='機車') bikeKm+=s.km; else carKm+=s.km;
     });
   }
   const money = bikeKm*rBike + carKm*rCar;
@@ -591,7 +611,8 @@ function exportExcel() {
   let allTrips=[];
   for(const [date, data] of Object.entries(month)) {
     if(!data.enabled||!data.segments) continue;
-    data.segments.forEach(s=>allTrips.push({date,...s}));
+    const dv = data.vehicle || '汽車';
+    data.segments.forEach(s=>allTrips.push({date,vehicle:dv,...s}));
   }
   allTrips.sort((a,b)=>a.date.localeCompare(b.date));
   
@@ -599,13 +620,13 @@ function exportExcel() {
   
   // Sheet 1
   let rows1=[['外勤日期','姓名','交通工具','起點/地點名稱','迄點/地點名稱','類別','次數','里程數','備註']];
-  allTrips.forEach(t=>rows1.push([t.date,APPLICANT,t.v,t.from,t.to,t.cat,2,t.km,'']));
+  allTrips.forEach(t=>rows1.push([t.date,APPLICANT,t.vehicle,t.from,t.to,t.cat,2,t.km,'']));
   
   // Sheet 2 (aggregated)
   const agg={};
   allTrips.forEach(t=>{
-    const k=`${t.from}|||${t.to}|||${t.v}`;
-    if(!agg[k]) agg[k]={from:t.from,to:t.to,v:t.v,km:t.km,cnt:0};
+    const k=`${t.from}|||${t.to}|||${t.vehicle}`;
+    if(!agg[k]) agg[k]={from:t.from,to:t.to,v:t.vehicle,km:t.km,cnt:0};
     agg[k].cnt++;
   });
   
@@ -641,14 +662,15 @@ function printReport() {
   let allTrips=[];
   for(const [date, data] of Object.entries(month)) {
     if(!data.enabled||!data.segments) continue;
-    data.segments.forEach(s=>allTrips.push({date,...s}));
+    const dv = data.vehicle || '汽車';
+    data.segments.forEach(s=>allTrips.push({date,vehicle:dv,...s}));
   }
   if(allTrips.length===0) { toast('本月無資料','error'); return; }
   
   const agg={};
   allTrips.forEach(t=>{
-    const k=`${t.from}|||${t.to}|||${t.v}`;
-    if(!agg[k]) agg[k]={from:t.from,to:t.to,v:t.v,km:t.km,cnt:0};
+    const k=`${t.from}|||${t.to}|||${t.vehicle}`;
+    if(!agg[k]) agg[k]={from:t.from,to:t.to,v:t.vehicle,km:t.km,cnt:0};
     agg[k].cnt++;
   });
   
