@@ -234,8 +234,8 @@ body{font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',system-ui,sans-se
   <button class="btn btn-sm btn-outline" id="syncToggleBtn" onclick="toggleSync()" style="font-size:0.75rem">🔗 啟用同步</button>
   <span id="syncStatus" style="font-size:0.7rem;color:var(--muted)"></span>
 </div>
-<button class="btn btn-sm btn-outline" onclick="pullFromGitHub().then(ok=>{if(ok){renderCalendar();renderEditor();toast('✅ 已從雲端同步');}else{toast('⚠️ 同步失敗，檢查 Token','error');}})" style="font-size:0.75rem;margin-top:4px">⬇️ 立即從雲端拉取</button>
-<p style="font-size:0.65rem;color:var(--muted);margin-top:6px">💡 Token 只需 repo 權限。每台裝置輸入相同 Token 即可自動同步。</p>
+<button class="btn btn-sm btn-outline" onclick="pullFromGitHub().then(ok=>{if(ok){renderCalendar();renderEditor();toast('✅ 已從雲端同步','success');}})" style="font-size:0.75rem;margin-top:4px">⬇️ 從雲端拉取（換裝置時按）</button>
+<p style="font-size:0.65rem;color:var(--muted);margin-top:6px">💡 跨裝置用法：PC 打完行程自動上傳雲端 → 手機開網頁 → 按此鈕拉取最新資料。Token 只需 repo 權限，每台裝置輸入相同 Token。</p>
 <div class="btn-row" style="margin-top:12px">
   <button class="btn btn-sm btn-primary" onclick="closeSettings()">完成</button>
   <button class="btn btn-sm btn-danger" onclick="clearAll()">⚠️ 清除資料</button>
@@ -362,19 +362,22 @@ async function _doSync() {
 
 async function pullFromGitHub() {
   const token = getGitHubToken();
-  if (!token) return false;
+  if (!token) { toast('請先在設定輸入 GitHub Token','error'); return false; }
   try {
     const resp = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
       headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' }
     });
-    if (!resp.ok) return false;
+    if (!resp.ok) {
+      if (resp.status === 404) { toast('雲端尚無資料，請先在此裝置儲存一些行程','error'); return false; }
+      toast('同步失敗，請檢查 Token 是否正確','error'); return false;
+    }
     const d = await resp.json();
     const all = JSON.parse(decodeURIComponent(escape(atob(d.content))));
     for (const [k, v] of Object.entries(all)) {
       localStorage.setItem(k, JSON.stringify(v));
     }
     return true;
-  } catch(e) { console.log('pull failed:', e); return false; }
+  } catch(e) { console.log('pull failed:', e); toast('網路錯誤，請稍後再試','error'); return false; }
 }
 
 function getDay(date) {
