@@ -333,7 +333,7 @@ async function _doSync() {
   const token = getGitHubToken();
   if (!token) return;
   try {
-    // Collect all localStorage oil_ data + cfg
+    // Collect all localStorage oil_ data
     const all = {};
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
@@ -351,12 +351,13 @@ async function _doSync() {
     } catch(e) {}
 
     // Put file
-    const body = JSON.stringify({ message: 'sync data', content, sha: sha || undefined, branch: 'main' });
-    await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
+    const body = JSON.stringify({ message: 'auto sync', content, sha: sha || undefined, branch: 'main' });
+    const putResp = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
       method: 'PUT',
       headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github+json' },
       body
     });
+    if (!putResp.ok) { console.log('sync upload failed:', putResp.status); }
   } catch(e) { console.log('sync failed:', e); }
 }
 
