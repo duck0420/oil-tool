@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>油資申請工具 - 吳仕緯</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #faf6f0; --card: #fffdf7; --card2: #f8f2e8;
+  --border: #e5d9c4; --text: #3d2e1c; --muted: #a89880;
+  --accent: #c4963c; --accent2: #d4a84b; --accent-light: #f5e8cf;
+  --green: #7a9a6e; --orange: #d4956a; --red: #c47360;
+  --holiday-bg: #faf0e4; --weekend-bg: #f3ede4;
+  --today-bg: #efe0c8; --workday-bg: #fefcf7;
+  --bike: #8b7aa0; --car: #d4956a;
+  --shadow: 0 1px 3px rgba(61,46,28,0.06);
+  --radius: 14px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;min-height:100vh;padding-bottom:40px}
+.bar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);background:rgba(255,253,247,0.92)}
+.bar .title{font-size:1.1rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+.bar .sub{font-size:0.8rem;color:var(--muted)}
+.main{max-width:800px;margin:0 auto;padding:16px}
+
+/* Month Nav */
+.month-nav{display:flex;align-items:center;justify-content:space-between;padding:8px 0;margin-bottom:8px}
+.month-nav h2{font-size:1.2rem;font-weight:700}
+.month-nav button{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:1rem;color:var(--text);display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.month-nav button:hover{background:var(--accent-light);border-color:var(--accent)}
+.month-nav .center{display:flex;align-items:center;gap:10px}
+.month-nav .today-btn{padding:6px 16px;border-radius:20px;font-size:0.8rem;font-weight:600;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);cursor:pointer;transition:0.15s}
+.month-nav .today-btn:hover{background:var(--accent);color:#fff}
+
+/* Calendar Grid */
+.calendar { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin-bottom: 14px; }
+.cal-header { display: grid; grid-template-columns: repeat(7,1fr); text-align: center; padding: 10px 0; font-size: 0.75rem; font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--border); }
+.cal-header span:first-child, .cal-header span:last-child { color: var(--red); }
+.cal-body { display: grid; grid-template-columns: repeat(7,1fr); }
+.cal-cell { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; font-size: 0.82rem; transition: all 0.12s; border-radius: 4px; font-weight: 500; min-height: 44px; }
+.cal-cell:hover { background: var(--accent-light); }
+.cal-cell .num { position: relative; z-index: 1; }
+.cal-cell.weekend { color: var(--muted); background: var(--weekend-bg); }
+.cal-cell.holiday { color: var(--red); background: var(--holiday-bg); }
+.cal-cell.today { font-weight: 800; }
+.cal-cell.today .num::after { content:''; position:absolute; bottom:-2px; left:50%; transform:translateX(-50%); width:5px; height:5px; border-radius:50%; background:var(--accent); }
+.cal-cell.active { background: var(--accent); color: #fff; border-radius: 10px; }
+.cal-cell.active.weekend, .cal-cell.active.holiday { background: var(--accent); color: #fff; }
+.cal-cell .badge { position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.cal-cell .badge.off { background: var(--red); opacity: 0.5; }
+.cal-cell.off { opacity: 0.5; }
+.cal-cell.empty { cursor: default; }
+.cal-cell.empty:hover { background: none; }
+
+/* Legend */
+.legend { display: flex; gap: 16px; font-size: 0.7rem; color: var(--muted); padding: 6px 0; flex-wrap: wrap; }
+.legend span { display: flex; align-items: center; gap: 4px; }
+.legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.legend .dot.work { background: var(--green); }
+.legend .dot.off { background: var(--red); opacity: 0.5; }
+.legend .dot.hol { background: var(--red); }
+.legend .dot.wknd { background: var(--muted); }
+
+/* Card */
+.card { background: var(--card); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+.card h3 { font-size: 0.95rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.card .date-title { font-size: 1rem; font-weight: 700; color: var(--accent); }
+
+/* Segment Editor */
+.segment { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--border); position: relative; }
+.segment:last-child { border-bottom: none; }
+.segment .seg-body { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.segment select, .segment input { padding: 7px 10px; background: var(--card2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.82rem; outline: none; font-family: inherit; }
+.segment select:focus, .segment input:focus { border-color: var(--accent); }
+.segment select { min-width: 130px; flex: 1; }
+.segment .seg-km { width: 64px; text-align: center; font-weight: 700; color: var(--accent); font-size: 0.85rem; background: transparent; border: none; padding: 4px; }
+.segment .seg-cat { width: 110px; font-size: 0.75rem; }
+.segment .arrow { color: var(--accent); font-size: 0.9rem; font-weight: bold; flex-shrink: 0; }
+.segment .del-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); cursor: pointer; color: var(--red); font-size: 0.85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: 0.15s; }
+.segment .del-btn:hover { background: #fce8e3; border-color: var(--red); }
+.insert-btn { width: 100%; padding: 4px; margin: 2px 0; border: 1px dashed var(--border); border-radius: 8px; background: transparent; cursor: pointer; color: var(--muted); font-size: 0.7rem; transition: 0.15s; text-align: center; }
+.insert-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+/* Buttons */
+.btn { padding: 9px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.15s; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-outline { background: var(--card); border: 1.5px solid var(--border); color: var(--text); }
+.btn-outline:hover { border-color: var(--accent); background: var(--accent-light); }
+.btn-sm { padding: 5px 12px; font-size: 0.75rem; border-radius: 8px; }
+.btn-danger { color: var(--red); border-color: var(--red); }
+.btn-danger:hover { background: #fce8e3; }
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:hover { opacity: 0.9; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Summary */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 10px; }
+.stat-card { background: var(--card2); border-radius: 10px; padding: 14px; text-align: center; }
+.stat-card .val { font-size: 1.4rem; font-weight: 700; }
+.stat-card .val.gold { color: var(--accent); }
+.stat-card .val.green { color: var(--green); }
+.stat-card .lbl { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
+/* Day toggle */
+.day-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.toggle-row { display: flex; align-items: center; gap: 8px; }
+.toggle-row .label { font-size: 0.8rem; color: var(--muted); }
+.toggle { position: relative; width: 44px; height: 24px; border-radius: 12px; border: none; cursor: pointer; background: #c4b9a8; transition: 0.2s; }
+.toggle.on { background: var(--green); }
+.toggle::after { content:''; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:#fff; transition:0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.1); }
+.toggle.on::after { left:22px; }
+
+/* Modal */
+.modal-bg { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(61,46,28,0.3);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);}
+.modal{background:var(--card);border-radius:var(--radius);padding:24px;max-width:420px;width:100%;box-shadow:0 4px 24px rgba(61,46,28,0.12);border:1px solid var(--border);max-height:90vh;overflow-y:auto}
+.modal h3{margin-bottom:12px;font-size:1rem}
+.modal input{padding:8px 12px;width:100%;border:1px solid var(--border);border-radius:8px;background:var(--card2);font-size:0.9rem}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 24px;border-radius:24px;font-size:0.85rem;font-weight:600;z-index:2000;animation:fadeUp 0.35s ease;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.toast.success{background:var(--green)}
+.toast.error{background:var(--red)}
+@keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.hidden{display:none!important}
+
+/* Print */
+@media print {
+  body{background:#fff}
+  .bar,.month-nav,.calendar,.card,.btn-row,.legend,.no-print{display:none!important}
+  .print-area{display:block!important;padding:0;margin:0}
+  .print-table{width:100%;border-collapse:collapse;font-size:12px}
+  .print-table th,.print-table td{border:1px solid #999;padding:6px 8px;text-align:center}
+  .print-table th{background:#f5f0e8}
+  .print-sig{margin-top:40px;display:flex;gap:40px}
+  .print-sig div{flex:1;text-align:center}
+  .print-sig .line{border-bottom:1px solid #333;margin-top:30px;padding-top:4px}
+}
+.print-area{display:none}
+
+@media(max-width:600px){
+  .main{padding:10px}
+  .segment .seg-body{flex-direction:column;align-items:stretch}
+  .segment .arrow{text-align:center}
+  .cal-cell{font-size:0.7rem;min-height:36px}
+  .bar{padding:10px 14px}
+}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div><span class="title">☕ 油資申請</span><span class="sub">吳仕緯</span></div>
+  <div style="display:flex;gap:6px">
+    <button class="btn btn-sm btn-outline" onclick="showSettings()">⚙️</button>
+    <button class="btn btn-sm btn-primary" onclick="exportExcel()">📥 匯出</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- Month Navigation -->
+<div class="month-nav">
+  <button onclick="changeMonth(-1)">◀</button>
+  <div class="center">
+    <h2 id="monthLabel"></h2>
+    <button class="today-btn" onclick="goToday()">今天</button>
+  </div>
+  <button onclick="changeMonth(1)">▶</button>
+</div>
+
+<!-- Calendar -->
+<div class="calendar">
+  <div class="cal-header"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+  <div class="cal-body" id="calBody"></div>
+</div>
+<div class="legend">
+  <span><span class="dot work"></span> 有行程</span>
+  <span><span class="dot off"></span> 休假/取消</span>
+  <span><span class="dot hol"></span> 國定假日</span>
+  <span><span class="dot wknd"></span> 週末</span>
+</div>
+
+<!-- Selected Day Editor -->
+<div class="card" id="editor">
+  <div class="day-header">
+    <div class="date-title" id="editorTitle">選擇日期</div>
+    <div class="toggle-row">
+      <span class="label">工作日</span>
+      <button class="toggle on" id="dayToggle" onclick="toggleDay()"></button>
+    </div>
+  </div>
+  <div id="segmentsList"></div>
+  <div class="btn-row">
+    <button class="btn btn-sm btn-outline" onclick="addSegment('end')">➕ 加入終點</button>
+    <button class="btn btn-sm btn-outline" onclick="resetDayToTemplate()">🔄 重設為預設路線</button>
+  </div>
+</div>
+
+<!-- Monthly Stats -->
+<div class="card no-print">
+  <h3>📊 當月統計</h3>
+  <div class="stats" id="monthStats"></div>
+</div>
+
+<!-- Export Buttons -->
+<div class="btn-row no-print">
+  <button class="btn btn-green" onclick="exportExcel()">📥 匯出完整 Excel</button>
+  <button class="btn btn-outline" onclick="printReport()">🖨️ 列印申請差旅費</button>
+</div>
+
+</div><!-- main -->
+
+<!-- Hidden print area -->
+<div class="print-area" id="printArea"></div>
+
+<!-- Settings Modal -->
+<div class="modal-bg hidden" id="settingsModal">
+<div class="modal">
+<h3>⚙️ 設定</h3>
+<label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">機車費率 (元/公里)</label>
+<input type="number" id="rateBike" step="0.1" value="4" onchange="saveCfg()" style="margin-bottom:10px">
+<label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">汽車費率 (元/公里)</label>
+<input type="number" id="rateCar" step="0.1" value="8" onchange="saveCfg()" style="margin-bottom:12px">
+<label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">自訂假日 (YYYY-MM-DD，逗號分隔)</label>
+<input type="text" id="customHolidays" placeholder="2026-07-10,2026-07-15" onchange="saveCfg()" style="margin-bottom:12px">
+<div class="btn-row">
+  <button class="btn btn-sm btn-primary" onclick="closeSettings()">完成</button>
+  <button class="btn btn-sm btn-danger" onclick="clearAll()">⚠️ 清除資料</button>
+</div>
+</div></div>
+
+<div id="toast" class="hidden"></div>
+
+<script>
+// ============ DATA ============
+const APPLICANT = '吳仕緯';
+
+// Default daily template (from original Excel)
+const TEMPLATE = [
+  {from:'台中分公司',to:'關務署台中關',km:20.2,cat:'總部至海關文件',v:'機車'},
+  {from:'關務署台中關',to:'陽明海運梧棲辦公室',km:3.4,cat:'查看有無文件可取回',v:'機車'},
+  {from:'陽明海運梧棲辦公室',to:'安舫船務',km:1,cat:'查看有無文件可取回',v:'機車'},
+  {from:'安舫船務',to:'建中船務',km:0.52,cat:'查看有無文件可取回',v:'機車'},
+  {from:'建中船務',to:'龍鑫船務',km:0.06,cat:'查看有無文件可取回',v:'機車'},
+  {from:'龍鑫船務',to:'國耀船務',km:1.1,cat:'查看有無文件可取回',v:'機車'},
+  {from:'國耀船務',to:'顗泰船務',km:2,cat:'查看有無文件可取回',v:'機車'},
+  {from:'顗泰船務',to:'關務署台中關',km:2,cat:'查看有無文件可取回',v:'機車'},
+  {from:'關務署台中關',to:'中國貨櫃',km:7.2,cat:'櫃場作業',v:'機車'},
+  {from:'中國貨櫃',to:'關務署台中關',km:7.2,cat:'回海關',v:'機車'},
+];
+
+// Mileage DB
+const MILEAGE = {
+  '台中分公司|關務署台中關':{機車:20.2,汽車:22.5},
+  '關務署台中關|陽明海運梧棲辦公室':{機車:3.4,汽車:4},
+  '陽明海運梧棲辦公室|安舫船務':{機車:1,汽車:1.2},
+  '安舫船務|建中船務':{機車:0.52,汽車:0.7},
+  '建中船務|龍鑫船務':{機車:0.06,汽車:0.1},
+  '龍鑫船務|國耀船務':{機車:1.1,汽車:1.5},
+  '國耀船務|顗泰船務':{機車:2,汽車:2.5},
+  '顗泰船務|關務署台中關':{機車:2,汽車:2.5},
+  '關務署台中關|中國貨櫃':{機車:7.2,汽車:8.5},
+  '中國貨櫃|關務署台中關':{機車:7.2,汽車:8.5},
+};
+const LOCATIONS = [...new Set(Object.keys(MILEAGE).flatMap(k=>k.split('|')))].sort();
+const CATEGORIES = ['銀行背書','送報單','送帳單','拿稅單','銀行繳稅','送稅單','取快遞文件','取送廠驗准單','拿退帳單','總部至海關文件','海關至總部文件','取封條','送封條','送光碟','取送報廢清冊','貨櫃運送單白聯','OP給廠商文件','廠商給OP文件','業務給廠商文件','廠商給海關之文件','送異常單','抓線扣稅單收據','列印報單','送桌曆 筆記本','查看有無文件可取回','發進口文件給OP','edi收據','進口證明聯','送空白貨櫃運送單','櫃場繳費','C3驗貨','櫃場作業','回海關'];
+
+// Taiwan 2026-2027 holidays
+const TW_HOLIDAYS = {
+  '2026-01-01': '元旦',
+  '2026-02-16':'春節','2026-02-17':'春節','2026-02-18':'春節','2026-02-19':'春節','2026-02-20':'春節',
+  '2026-03-02':'和平紀念日補假',
+  '2026-04-03':'清明節連假','2026-04-04':'清明節','2026-04-05':'清明節',
+  '2026-05-01':'勞動節',
+  '2026-06-19':'端午節','2026-06-20':'端午節連假','2026-06-21':'端午節連假',
+  '2026-09-25':'中秋節','2026-09-26':'中秋節連假','2026-09-27':'中秋節連假',
+  '2026-10-09':'國慶日連假','2026-10-10':'國慶日','2026-10-11':'國慶日連假',
+  '2027-01-01':'元旦',
+};
+
+// ============ STATE ============
+let curY = new Date().getFullYear(), curM = new Date().getMonth();
+let selDate = todayStr();
+let selData = null; // {enabled, segments:[{from,to,km,cat,v}]}
+
+// ============ DATA STORE ============
+function dbKey() { return `oil_${curY}-${String(curM+1).padStart(2,'0')}`; }
+function loadMonth() { try{return JSON.parse(localStorage.getItem(dbKey())||'{}');}catch(e){return {};} }
+function saveMonth(data) { localStorage.setItem(dbKey(), JSON.stringify(data)); }
+function loadCfg() { try{return JSON.parse(localStorage.getItem('oil_cfg')||'{}');}catch(e){return {};} }
+function saveCfgData(d) { localStorage.setItem('oil_cfg', JSON.stringify(d)); }
+
+function getDay(date) {
+  const month = loadMonth();
+  if(month[date]) return month[date];
+  // Auto-init for workdays
+  const d = new Date(date);
+  const dow = d.getDay();
+  const isWeekend = dow===0||dow===6;
+  const isHoliday = !!TW_HOLIDAYS[date];
+  const enabled = !isWeekend && !isHoliday;
+  return {enabled, segments: enabled ? JSON.parse(JSON.stringify(TEMPLATE)) : []};
+}
+
+function setDay(date, data) {
+  const month = loadMonth();
+  month[date] = data;
+  saveMonth(month);
+}
+
+function loadDay(date) {
+  selDate = date;
+  selData = getDay(date);
+  renderEditor();
+  renderCalendar();
+}
+
+function todayStr() { return new Date().toISOString().slice(0,10); }
+
+// ============ CALENDAR ============
+function renderCalendar() {
+  const y=curY, m=curM;
+  document.getElementById('monthLabel').textContent=`${y} 年 ${m+1} 月`;
+  
+  const firstDay = new Date(y,m,1).getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const today = todayStr();
+  const month = loadMonth();
+  
+  let html='';
+  for(let i=0;i<firstDay;i++) html+='<div class="cal-cell empty"></div>';
+  
+  for(let d=1;d<=daysInMonth;d++){
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(y,m,d).getDay();
+    const isWeekend = dow===0||dow===6;
+    const isHoliday = !!TW_HOLIDAYS[ds];
+    const dayData = month[ds] || getDay(ds);
+    const active = ds===selDate;
+    const hasTrips = dayData.enabled && dayData.segments && dayData.segments.length>0;
+    
+    let cls = 'cal-cell';
+    if(isWeekend) cls+=' weekend';
+    if(isHoliday) cls+=' holiday';
+    if(isWeekend||isHoliday||!dayData.enabled) cls+=' off';
+    if(ds===today) cls+=' today';
+    if(active) cls+=' active';
+    
+    html+=`<div class="${cls}" onclick="loadDay('${ds}')">
+      <span class="num">${d}</span>
+      ${hasTrips?`<span class="badge"></span>`:''}
+      ${!dayData.enabled&&!isWeekend&&!isHoliday?`<span class="badge off"></span>`:''}
+    </div>`;
+  }
+  document.getElementById('calBody').innerHTML=html;
+  renderStats();
+}
+
+// ============ EDITOR ============
+function renderEditor() {
+  const title = document.getElementById('editorTitle');
+  const isWeekend = new Date(selDate).getDay()%6===0;
+  const isHoliday = !!TW_HOLIDAYS[selDate];
+  title.textContent = `📅 ${selDate}${isWeekend?' 週末':''}${isHoliday?' 🏖️ '+TW_HOLIDAYS[selDate]:''}`;
+  
+  const toggle = document.getElementById('dayToggle');
+  toggle.className = 'toggle' + (selData.enabled?' on':'');
+  
+  const list = document.getElementById('segmentsList');
+  if(!selData.segments || selData.segments.length===0) {
+    list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:0.85rem">本日無行程（休假或假日）</div>';
+    return;
+  }
+  
+  let html='';
+  selData.segments.forEach((s,i)=>{
+    // Insert button before first segment
+    if(i===0) html+=`<button class="insert-btn" onclick="addSegment(0)">＋ 在此前插入</button>`;
+    
+    html+=`<div class="segment">
+      <div class="seg-body">
+        <select onchange="updateSeg(${i},'from',this.value)">${locOpts(s.from)}</select>
+        <span class="arrow">→</span>
+        <select onchange="updateSeg(${i},'to',this.value)">${locOpts(s.to)}</select>
+        <input class="seg-km" type="number" step="0.01" value="${s.km}" onchange="updateSeg(${i},'km',parseFloat(this.value)||0)" title="里程">
+        <select class="seg-cat" onchange="updateSeg(${i},'cat',this.value)">${catOpts(s.cat)}</select>
+        <select class="seg-cat" onchange="updateSeg(${i},'v',this.value)" style="width:60px">
+          <option value="機車" ${s.v==='機車'?'selected':''}>🏍️</option>
+          <option value="汽車" ${s.v==='汽車'?'selected':''}>🚗</option>
+        </select>
+      </div>
+      <button class="del-btn" onclick="removeSeg(${i})">✕</button>
+    </div>`;
+    
+    // Insert button after
+    html+=`<button class="insert-btn" onclick="addSegment(${i+1})">＋ 在此後插入</button>`;
+  });
+  list.innerHTML=html;
+}
+
+function locOpts(sel) { return LOCATIONS.map(l=>`<option value="${l}" ${l===sel?'selected':''}>${l}</option>`).join(''); }
+function catOpts(sel) { return CATEGORIES.map(c=>`<option value="${c}" ${c===sel?'selected':''}>${c}</option>`).join(''); }
+
+function updateSeg(idx, field, val) {
+  selData.segments[idx][field] = val;
+  // Auto mileage if from+to changed
+  if(field==='from'||field==='to') {
+    const s = selData.segments[idx];
+    const m = MILEAGE[`${s.from}|${s.to}`];
+    if(m && m[s.v]) s.km = m[s.v];
+  }
+  if(field==='v') {
+    const s = selData.segments[idx];
+    const m = MILEAGE[`${s.from}|${s.to}`];
+    if(m && m[s.v]) s.km = m[s.v];
+  }
+  setDay(selDate, selData);
+  selData = getDay(selDate);
+  renderEditor();
+  renderCalendar();
+}
+
+function addSegment(atIdx) {
+  if(!selData.segments) selData.segments = [];
+  if(!selData.enabled) { selData.enabled=true; }
+  const s = {from:'',to:'',km:0,cat:'查看有無文件可取回',v:'機車'};
+  if(atIdx===undefined || atIdx>=selData.segments.length) {
+    if(selData.segments.length>0) s.from = selData.segments[selData.segments.length-1].to;
+    selData.segments.push(s);
+  } else {
+    selData.segments.splice(atIdx, 0, s);
+  }
+  setDay(selDate, selData);
+  selData = getDay(selDate);
+  renderEditor();
+  renderCalendar();
+}
+
+function removeSeg(idx) {
+  if(selData.segments.length<=1) { toast('至少保留一段路線','error'); return; }
+  selData.segments.splice(idx,1);
+  setDay(selDate, selData);
+  selData = getDay(selDate);
+  renderEditor();
+  renderCalendar();
+}
+
+function resetDayToTemplate() {
+  selData.segments = JSON.parse(JSON.stringify(TEMPLATE));
+  selData.enabled = true;
+  setDay(selDate, selData);
+  selData = getDay(selDate);
+  renderEditor();
+  renderCalendar();
+  toast('已重設為預設路線');
+}
+
+function toggleDay() {
+  selData.enabled = !selData.enabled;
+  if(selData.enabled && (!selData.segments||selData.segments.length===0)) {
+    selData.segments = JSON.parse(JSON.stringify(TEMPLATE));
+  }
+  setDay(selDate, selData);
+  selData = getDay(selDate);
+  renderEditor();
+  renderCalendar();
+}
+
+// ============ STATS ============
+function renderStats() {
+  const month = loadMonth();
+  let totalKm=0, bikeKm=0, carKm=0, workDays=0, tripSegs=0;
+  const cfg = loadCfg();
+  const rBike = parseFloat(cfg.rateBike||4), rCar = parseFloat(cfg.rateCar||8);
+  
+  for(const [date, data] of Object.entries(month)) {
+    if(!data.enabled || !data.segments) continue;
+    const dow = new Date(date).getDay();
+    if(dow===0||dow===6) continue;
+    workDays++;
+    data.segments.forEach(s=>{
+      tripSegs++;
+      totalKm+=s.km;
+      if(s.v==='機車') bikeKm+=s.km; else carKm+=s.km;
+    });
+  }
+  const money = bikeKm*rBike + carKm*rCar;
+  
+  document.getElementById('monthStats').innerHTML=`
+    <div class="stat-card"><div class="val">${workDays}</div><div class="lbl">工作天數</div></div>
+    <div class="stat-card"><div class="val">${tripSegs}</div><div class="lbl">行程段數</div></div>
+    <div class="stat-card"><div class="val gold">${totalKm.toFixed(1)}</div><div class="lbl">總里程 km</div></div>
+    <div class="stat-card"><div class="val gold">${bikeKm.toFixed(1)}</div><div class="lbl">🏍️ 機車 km</div></div>
+    <div class="stat-card"><div class="val gold">${carKm.toFixed(1)}</div><div class="lbl">🚗 汽車 km</div></div>
+    <div class="stat-card"><div class="val green">$${money.toFixed(0)}</div><div class="lbl">💰 預估油資</div></div>
+  `;
+}
+
+// ============ EXPORT ============
+function exportExcel() {
+  const month = loadMonth();
+  const cfg = loadCfg();
+  const rBike = parseFloat(cfg.rateBike||4), rCar = parseFloat(cfg.rateCar||8);
+  
+  // Collect all trips
+  let allTrips=[];
+  for(const [date, data] of Object.entries(month)) {
+    if(!data.enabled||!data.segments) continue;
+    data.segments.forEach(s=>allTrips.push({date,...s}));
+  }
+  allTrips.sort((a,b)=>a.date.localeCompare(b.date));
+  
+  if(allTrips.length===0) { toast('本月無資料可匯出','error'); return; }
+  
+  // Sheet 1
+  let rows1=[['外勤日期','姓名','交通工具','起點/地點名稱','迄點/地點名稱','類別','次數','里程數','備註']];
+  allTrips.forEach(t=>rows1.push([t.date,APPLICANT,t.v,t.from,t.to,t.cat,2,t.km,'']));
+  
+  // Sheet 2 (aggregated)
+  const agg={};
+  allTrips.forEach(t=>{
+    const k=`${t.from}|||${t.to}|||${t.v}`;
+    if(!agg[k]) agg[k]={from:t.from,to:t.to,v:t.v,km:t.km,cnt:0};
+    agg[k].cnt++;
+  });
+  
+  let rows2=[['起點/地點名稱','迄點/地點名稱','交通工具','里程數','次數','總里程','申請金額']];
+  let tCnt=0,tKm=0,tAmt=0;
+  for(const [k,v] of Object.entries(agg)) {
+    const tk=v.km*v.cnt;
+    const rate=v.v==='機車'?rBike:rCar;
+    const amt=tk*rate;
+    tCnt+=v.cnt; tKm+=tk; tAmt+=amt;
+    rows2.push([v.from,v.to,v.v,v.km,v.cnt,Math.round(tk*100)/100,Math.round(amt)]);
+  }
+  rows2.push([],['總計','','','',tCnt,Math.round(tKm*100)/100,Math.round(tAmt)],[],
+    ['申請人:',APPLICANT],[],['簽名欄:'],
+    ['理級主管','','課級主管','','申請人員','','']);
+  
+  const wb=XLSX.utils.book_new();
+  const ws1=XLSX.utils.aoa_to_sheet(rows1);
+  const ws2=XLSX.utils.aoa_to_sheet(rows2);
+  ws1['!cols']=[{wch:12},{wch:10},{wch:8},{wch:22},{wch:22},{wch:18},{wch:6},{wch:10},{wch:15}];
+  ws2['!cols']=[{wch:22},{wch:22},{wch:8},{wch:10},{wch:8},{wch:10},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws1,'外勤工作表');
+  XLSX.utils.book_append_sheet(wb,ws2,'申請差旅費');
+  XLSX.writeFile(wb,`${curY}年${curM+1}月外勤工作報表_${APPLICANT}.xlsx`);
+  toast('✅ 已匯出 Excel','success');
+}
+
+function printReport() {
+  const month = loadMonth();
+  const cfg = loadCfg();
+  const rBike = parseFloat(cfg.rateBike||4), rCar = parseFloat(cfg.rateCar||8);
+  
+  let allTrips=[];
+  for(const [date, data] of Object.entries(month)) {
+    if(!data.enabled||!data.segments) continue;
+    data.segments.forEach(s=>allTrips.push({date,...s}));
+  }
+  if(allTrips.length===0) { toast('本月無資料','error'); return; }
+  
+  const agg={};
+  allTrips.forEach(t=>{
+    const k=`${t.from}|||${t.to}|||${t.v}`;
+    if(!agg[k]) agg[k]={from:t.from,to:t.to,v:t.v,km:t.km,cnt:0};
+    agg[k].cnt++;
+  });
+  
+  let tbody='',tCnt=0,tKm=0,tAmt=0;
+  for(const [k,v] of Object.entries(agg)) {
+    const tk=v.km*v.cnt, rate=v.v==='機車'?rBike:rCar, amt=tk*rate;
+    tCnt+=v.cnt; tKm+=tk; tAmt+=amt;
+    tbody+=`<tr><td>${v.from}</td><td>${v.to}</td><td>${v.v}</td><td>${v.km}</td><td>${v.cnt}</td><td>${Math.round(tk*100)/100}</td><td>${Math.round(amt)}</td></tr>`;
+  }
+  
+  const printHTML = `
+    <style>body{font-family:'PingFang TC','Microsoft JhengHei',sans-serif;color:#3d2e1c;padding:30px} 
+    h2{text-align:center;margin-bottom:4px} .sub{text-align:center;color:#888;margin-bottom:20px;font-size:14px}
+    table{width:100%;border-collapse:collapse;font-size:13px} th,td{border:1px solid #bbb;padding:6px 8px;text-align:center} th{background:#f5f0e8}
+    .sig{margin-top:50px;display:flex;gap:60px;justify-content:center} .sig div{text-align:center;width:120px}
+    .sig .line{border-bottom:1px solid #333;margin-top:36px;padding-top:6px;font-size:14px}
+    @media print{body{padding:10px}}</style>
+    <h2>申請差旅費 - ${curY}年${curM+1}月</h2>
+    <p class="sub">申請人：${APPLICANT}</p>
+    <table><thead><tr><th>起點</th><th>迄點</th><th>交通</th><th>里程</th><th>次數</th><th>總里程</th><th>金額</th></tr></thead>
+    <tbody>${tbody}<tr style="font-weight:bold;background:#f5f0e8"><td colspan="4">總計</td><td>${tCnt}</td><td>${Math.round(tKm*100)/100}</td><td>${Math.round(tAmt)}</td></tr></tbody></table>
+    <div class="sig"><div><div class="line">理級主管</div></div><div><div class="line">課級主管</div></div><div><div class="line">申請人員</div></div></div>
+  `;
+  
+  const w=window.open('','_blank','width=800,height=600');
+  w.document.write(printHTML);
+  w.document.close();
+  setTimeout(()=>w.print(),500);
+}
+
+// ============ SETTINGS ============
+function showSettings() {
+  const cfg=loadCfg();
+  document.getElementById('rateBike').value=cfg.rateBike||4;
+  document.getElementById('rateCar').value=cfg.rateCar||8;
+  document.getElementById('customHolidays').value=(cfg.customHolidays||[]).join(',');
+  document.getElementById('settingsModal').classList.remove('hidden');
+}
+function closeSettings(){document.getElementById('settingsModal').classList.add('hidden');renderStats();}
+function saveCfg(){
+  saveCfgData({
+    rateBike:document.getElementById('rateBike').value,
+    rateCar:document.getElementById('rateCar').value,
+    customHolidays:document.getElementById('customHolidays').value.split(',').map(s=>s.trim()).filter(Boolean)
+  });
+  renderStats();
+}
+function clearAll(){
+  if(!confirm('確定清除所有資料？'))return;
+  for(let i=localStorage.length-1;i>=0;i--){
+    const k=localStorage.key(i);
+    if(k.startsWith('oil_')) localStorage.removeItem(k);
+  }
+  location.reload();
+}
+
+// ============ NAVIGATION ============
+function changeMonth(d) { curM+=d; if(curM<0){curM=11;curY--;} if(curM>11){curM=0;curY++;} selDate=`${curY}-${String(curM+1).padStart(2,'0')}-01`; selData=getDay(selDate); renderCalendar(); renderEditor(); }
+function goToday() { curY=new Date().getFullYear(); curM=new Date().getMonth(); selDate=todayStr(); selData=getDay(selDate); renderCalendar(); renderEditor(); }
+
+// ============ UTILS ============
+function toast(msg,type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type;
+  t.classList.remove('hidden');
+  setTimeout(()=>t.classList.add('hidden'),2200);
+}
+
+// ============ INIT ============
+selData=getDay(selDate);
+renderCalendar();
+renderEditor();
+</script>
+</body>
+</html>
