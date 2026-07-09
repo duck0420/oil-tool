@@ -248,35 +248,36 @@ body{font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',system-ui,sans-se
 // ============ DATA ============
 const APPLICANT = '吳仕緯';
 
-// Default daily template (from original Excel) — vehicle is set per-day, default 汽車
+// Default daily template — 里程不分汽機車，距離相同
 const TEMPLATE = [
-  {from:'台中分公司',to:'關務署台中關',km:22.5,cat:'總部至海關文件'},
-  {from:'關務署台中關',to:'陽明海運梧棲辦公室',km:4,cat:'查看有無文件可取回'},
-  {from:'陽明海運梧棲辦公室',to:'安舫船務',km:1.2,cat:'查看有無文件可取回'},
-  {from:'安舫船務',to:'建中船務',km:0.7,cat:'查看有無文件可取回'},
-  {from:'建中船務',to:'龍鑫船務',km:0.1,cat:'查看有無文件可取回'},
-  {from:'龍鑫船務',to:'國耀船務',km:1.5,cat:'查看有無文件可取回'},
-  {from:'國耀船務',to:'顗泰船務',km:2.5,cat:'查看有無文件可取回'},
-  {from:'顗泰船務',to:'關務署台中關',km:2.5,cat:'查看有無文件可取回'},
-  {from:'關務署台中關',to:'中國貨櫃',km:8.5,cat:'櫃場作業'},
-  {from:'中國貨櫃',to:'關務署台中關',km:8.5,cat:'回海關'},
+  {from:'台中分公司',to:'關務署台中關',km:20.2,cat:'總部至海關文件'},
+  {from:'關務署台中關',to:'陽明海運梧棲辦公室',km:3.4,cat:'查看有無文件可取回'},
+  {from:'陽明海運梧棲辦公室',to:'安舫船務',km:1,cat:'查看有無文件可取回'},
+  {from:'安舫船務',to:'建中船務',km:0.52,cat:'查看有無文件可取回'},
+  {from:'建中船務',to:'龍鑫船務',km:0.052,cat:'查看有無文件可取回'},
+  {from:'龍鑫船務',to:'國耀船務',km:1.1,cat:'查看有無文件可取回'},
+  {from:'國耀船務',to:'顗泰船務',km:2,cat:'查看有無文件可取回'},
+  {from:'顗泰船務',to:'關務署台中關',km:2,cat:'查看有無文件可取回'},
+  {from:'關務署台中關',to:'中國貨櫃',km:7.2,cat:'櫃場作業'},
+  {from:'中國貨櫃',to:'關務署台中關',km:7.2,cat:'回海關'},
 ];
 
-// Mileage DB
+// Mileage DB — same for both vehicles, distance doesn't change
 const MILEAGE = {
-  '台中分公司|關務署台中關':{機車:20.2,汽車:22.5},
-  '關務署台中關|陽明海運梧棲辦公室':{機車:3.4,汽車:4},
-  '陽明海運梧棲辦公室|安舫船務':{機車:1,汽車:1.2},
-  '安舫船務|建中船務':{機車:0.52,汽車:0.7},
-  '建中船務|龍鑫船務':{機車:0.06,汽車:0.1},
-  '龍鑫船務|國耀船務':{機車:1.1,汽車:1.5},
-  '國耀船務|顗泰船務':{機車:2,汽車:2.5},
-  '顗泰船務|關務署台中關':{機車:2,汽車:2.5},
-  '關務署台中關|中國貨櫃':{機車:7.2,汽車:8.5},
-  '中國貨櫃|關務署台中關':{機車:7.2,汽車:8.5},
+  '台中分公司|關務署台中關':{機車:20.2,汽車:20.2},
+  '關務署台中關|陽明海運梧棲辦公室':{機車:3.4,汽車:3.4},
+  '陽明海運梧棲辦公室|安舫船務':{機車:1,汽車:1},
+  '安舫船務|建中船務':{機車:0.52,汽車:0.52},
+  '建中船務|龍鑫船務':{機車:0.052,汽車:0.052},
+  '龍鑫船務|國耀船務':{機車:1.1,汽車:1.1},
+  '國耀船務|顗泰船務':{機車:2,汽車:2},
+  '顗泰船務|關務署台中關':{機車:2,汽車:2},
+  '關務署台中關|中國貨櫃':{機車:7.2,汽車:7.2},
+  '中國貨櫃|關務署台中關':{機車:7.2,汽車:7.2},
 };
 const LOCATIONS = [...new Set(Object.keys(MILEAGE).flatMap(k=>k.split('|')))].sort();
 const CATEGORIES = ['銀行背書','送報單','送帳單','拿稅單','銀行繳稅','送稅單','取快遞文件','取送廠驗准單','拿退帳單','總部至海關文件','海關至總部文件','取封條','送封條','送光碟','取送報廢清冊','貨櫃運送單白聯','OP給廠商文件','廠商給OP文件','業務給廠商文件','廠商給海關之文件','送異常單','抓線扣稅單收據','列印報單','送桌曆 筆記本','查看有無文件可取回','發進口文件給OP','edi收據','進口證明聯','送空白貨櫃運送單','櫃場繳費','C3驗貨','櫃場作業','回海關'];
+const ROUND_TRIP = 2; // 每次來回算 2 趟
 
 // Taiwan 2026-2027 holidays
 const TW_HOLIDAYS = {
@@ -585,8 +586,9 @@ function renderStats() {
     const v = data.vehicle || '汽車';
     data.segments.forEach(s=>{
       tripSegs++;
-      totalKm+=s.km;
-      if(v==='機車') bikeKm+=s.km; else carKm+=s.km;
+      const km = s.km * ROUND_TRIP;
+      totalKm+=km;
+      if(v==='機車') bikeKm+=km; else carKm+=km;
     });
   }
   const money = bikeKm*rBike + carKm*rCar;
@@ -620,7 +622,7 @@ function exportExcel() {
   
   // Sheet 1
   let rows1=[['外勤日期','姓名','交通工具','起點/地點名稱','迄點/地點名稱','類別','次數','里程數','備註']];
-  allTrips.forEach(t=>rows1.push([t.date,APPLICANT,t.vehicle,t.from,t.to,t.cat,2,t.km,'']));
+  allTrips.forEach(t=>rows1.push([t.date,APPLICANT,t.vehicle,t.from,t.to,t.cat,ROUND_TRIP,t.km,'']));
   
   // Sheet 2 (aggregated)
   const agg={};
@@ -630,14 +632,14 @@ function exportExcel() {
     agg[k].cnt++;
   });
   
-  let rows2=[['起點/地點名稱','迄點/地點名稱','交通工具','里程數','次數','總里程','申請金額']];
+  let rows2=[['起點/地點名稱','迄點/地點名稱','交通工具','里程數','1.次數','2.里程數','申請金額']];
   let tCnt=0,tKm=0,tAmt=0;
   for(const [k,v] of Object.entries(agg)) {
-    const tk=v.km*v.cnt;
+    const tk=v.km*v.cnt*ROUND_TRIP;
     const rate=v.v==='機車'?rBike:rCar;
     const amt=tk*rate;
-    tCnt+=v.cnt; tKm+=tk; tAmt+=amt;
-    rows2.push([v.from,v.to,v.v,v.km,v.cnt,Math.round(tk*100)/100,Math.round(amt)]);
+    tCnt+=v.cnt*ROUND_TRIP; tKm+=tk; tAmt+=amt;
+    rows2.push([v.from,v.to,v.v,v.km,v.cnt*ROUND_TRIP,Math.round(tk*100)/100,Math.round(amt)]);
   }
   rows2.push([],['總計','','','',tCnt,Math.round(tKm*100)/100,Math.round(tAmt)],[],
     ['申請人:',APPLICANT],[],['簽名欄:'],
@@ -676,8 +678,8 @@ function printReport() {
   
   let tbody='',tCnt=0,tKm=0,tAmt=0;
   for(const [k,v] of Object.entries(agg)) {
-    const tk=v.km*v.cnt, rate=v.v==='機車'?rBike:rCar, amt=tk*rate;
-    tCnt+=v.cnt; tKm+=tk; tAmt+=amt;
+    const tk=v.km*v.cnt*ROUND_TRIP, rate=v.v==='機車'?rBike:rCar, amt=tk*rate;
+    tCnt+=v.cnt*ROUND_TRIP; tKm+=tk; tAmt+=amt;
     tbody+=`<tr><td>${v.from}</td><td>${v.to}</td><td>${v.v}</td><td>${v.km}</td><td>${v.cnt}</td><td>${Math.round(tk*100)/100}</td><td>${Math.round(amt)}</td></tr>`;
   }
   
