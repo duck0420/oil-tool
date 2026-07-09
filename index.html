@@ -604,19 +604,28 @@ function renderStats() {
 }
 
 // ============ EXPORT ============
-function exportExcel() {
-  const month = loadMonth();
-  const cfg = loadCfg();
-  const rBike = parseFloat(cfg.rateBike||4), rCar = parseFloat(cfg.rateCar||8);
-  
-  // Collect all trips
+function collectMonthTrips() {
+  const y=curY, m=curM;
+  const daysInMonth = new Date(y,m+1,0).getDate();
   let allTrips=[];
-  for(const [date, data] of Object.entries(month)) {
+  for(let d=1;d<=daysInMonth;d++){
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(y,m,d).getDay();
+    if(dow===0||dow===6) continue;
+    if(TW_HOLIDAYS[ds]) continue;
+    const data = getDay(ds);
     if(!data.enabled||!data.segments) continue;
     const dv = data.vehicle || '汽車';
-    data.segments.forEach(s=>allTrips.push({date,vehicle:dv,...s}));
+    data.segments.forEach(s=>allTrips.push({date:ds,vehicle:dv,...s}));
   }
   allTrips.sort((a,b)=>a.date.localeCompare(b.date));
+  return allTrips;
+}
+
+function exportExcel() {
+  const allTrips = collectMonthTrips();
+  const cfg = loadCfg();
+  const rBike = parseFloat(cfg.rateBike||4), rCar = parseFloat(cfg.rateCar||8);
   
   if(allTrips.length===0) { toast('本月無資料可匯出','error'); return; }
   
@@ -657,16 +666,9 @@ function exportExcel() {
 }
 
 function printReport() {
-  const month = loadMonth();
+  const allTrips = collectMonthTrips();
   const cfg = loadCfg();
   const rBike = parseFloat(cfg.rateBike||4), rCar = parseFloat(cfg.rateCar||8);
-  
-  let allTrips=[];
-  for(const [date, data] of Object.entries(month)) {
-    if(!data.enabled||!data.segments) continue;
-    const dv = data.vehicle || '汽車';
-    data.segments.forEach(s=>allTrips.push({date,vehicle:dv,...s}));
-  }
   if(allTrips.length===0) { toast('本月無資料','error'); return; }
   
   const agg={};
