@@ -336,7 +336,7 @@ async function syncToFirebase(showToast) {
     }
     await _db.ref('/oil-tool').set(all);
     if (showToast) toast('✅ 已同步到雲端','success');
-  } catch(e) { if (showToast) toast('❌ 同步失敗','error'); }
+  } catch(e) { if (showToast) toast('❌ 同步失敗：'+e.message,'error'); }
 }
 
 async function pullFromFirebase(showToast) {
