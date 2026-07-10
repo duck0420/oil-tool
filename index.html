@@ -332,7 +332,7 @@ async function syncToFirebase(showToast) {
     const all = {};
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k.startsWith('oil_')) all[k] = JSON.parse(localStorage.getItem(k));
+      if (k.startsWith('oil_') && k !== 'oil_gh_token' && k !== 'oil_sync_enabled') all[k] = JSON.parse(localStorage.getItem(k));
     }
     await _db.ref('/oil-tool').set(all);
     if (showToast) toast('✅ 已同步到雲端','success');
