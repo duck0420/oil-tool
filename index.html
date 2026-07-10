@@ -153,6 +153,7 @@ body{font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',system-ui,sans-se
 <div class="bar">
   <div><span class="title">☕ 油資申請</span><span class="sub">吳仕緯</span></div>
   <div style="display:flex;gap:6px">
+    <button class="btn btn-sm btn-outline" onclick="syncNow()" title="手動同步到雲端">☁️</button>
     <button class="btn btn-sm btn-outline" onclick="showSettings()">⚙️</button>
     <button class="btn btn-sm btn-primary" onclick="exportExcel()">📥 匯出</button>
   </div>
@@ -320,30 +321,50 @@ function isSyncEnabled() {
   return localStorage.getItem('oil_sync_enabled') === 'true' && !!getGitHubToken();
 }
 
-async function syncToGitHub() {
+// Proper UTF-8 base64 encode/decode (no deprecated unescape/escape)
+function utf8ToBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  bytes.forEach(b => binary += String.fromCharCode(b));
+  return btoa(binary);
+}
+function base64ToUtf8(b64) {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+async function syncToGitHub(showToastFlag) {
   if (!isSyncEnabled()) return;
   clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(() => _doSync(), 800);
+  _syncTimer = setTimeout(() => _doSync(showToastFlag), 500);
 }
 
 async function syncCfgToGitHub() {
   if (!isSyncEnabled()) return;
-  await _doSync();
+  await _doSync(false);
 }
 
-async function _doSync() {
+async function syncNow() {
+  if (!isSyncEnabled()) { toast('請先在設定啟用同步','error'); return; }
+  toast('☁️ 正在上傳到雲端...');
+  const ok = await _doSync(true);
+  if (ok) toast('✅ 已同步到雲端','success');
+  else toast('❌ 同步失敗，請檢查網路或 Token','error');
+}
+
+async function _doSync(showToast) {
   const token = getGitHubToken();
-  if (!token) return;
+  if (!token) return false;
   try {
-    // Collect all localStorage oil_ data
     const all = {};
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (k.startsWith('oil_')) all[k] = JSON.parse(localStorage.getItem(k));
     }
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(all))));
+    const content = utf8ToBase64(JSON.stringify(all));
     
-    // Get existing file SHA
     let sha = '';
     try {
       const getResp = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
@@ -352,15 +373,18 @@ async function _doSync() {
       if (getResp.ok) { const d = await getResp.json(); sha = d.sha; }
     } catch(e) {}
 
-    // Put file
     const body = JSON.stringify({ message: 'auto sync', content, sha: sha || undefined, branch: 'main' });
     const putResp = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
       method: 'PUT',
       headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github+json' },
       body
     });
-    if (!putResp.ok) { console.log('sync upload failed:', putResp.status); }
-  } catch(e) { console.log('sync failed:', e); }
+    if (!putResp.ok) {
+      if (showToast) console.error('sync upload failed:', putResp.status);
+      return false;
+    }
+    return true;
+  } catch(e) { console.error('sync failed:', e); return false; }
 }
 
 async function pullFromGitHub() {
@@ -371,16 +395,16 @@ async function pullFromGitHub() {
       headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' }
     });
     if (!resp.ok) {
-      if (resp.status === 404) { toast('雲端尚無資料，請先在此裝置儲存一些行程','error'); return false; }
+      if (resp.status === 404) { toast('雲端尚無資料，請先儲存行程後同步','error'); return false; }
       toast('同步失敗，請檢查 Token 是否正確','error'); return false;
     }
     const d = await resp.json();
-    const all = JSON.parse(decodeURIComponent(escape(atob(d.content))));
+    const all = JSON.parse(base64ToUtf8(d.content));
     for (const [k, v] of Object.entries(all)) {
       localStorage.setItem(k, JSON.stringify(v));
     }
     return true;
-  } catch(e) { console.log('pull failed:', e); toast('網路錯誤，請稍後再試','error'); return false; }
+  } catch(e) { console.error('pull failed:', e); toast('網路錯誤，請稍後再試','error'); return false; }
 }
 
 function getDay(date) {
