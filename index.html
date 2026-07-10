@@ -367,10 +367,16 @@ async function _doSync(showToast) {
     
     let sha = '';
     try {
-      const getResp = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
-        headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' }
+      const getResp = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/data.json`, {
+        headers: { 'Cache-Control': 'no-cache' }
       });
-      if (getResp.ok) { const d = await getResp.json(); sha = d.sha; }
+      if (getResp.ok) {
+        // Get SHA via API for the update
+        const shaResp = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
+          headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' }
+        });
+        if (shaResp.ok) { const d = await shaResp.json(); sha = d.sha; }
+      }
     } catch(e) {}
 
     const body = JSON.stringify({ message: 'auto sync', content, sha: sha || undefined, branch: 'main' });
@@ -380,11 +386,15 @@ async function _doSync(showToast) {
       body
     });
     if (!putResp.ok) {
-      if (showToast) console.error('sync upload failed:', putResp.status);
+      if (showToast) {
+        if (putResp.status === 401) toast('Token 無效，請重新產生','error');
+        else if (putResp.status === 403) toast('Token 權限不足，需勾選 repo','error');
+        else toast('上傳失敗 (HTTP '+putResp.status+')','error');
+      }
       return false;
     }
     return true;
-  } catch(e) { console.error('sync failed:', e); return false; }
+  } catch(e) { console.error('sync failed:', e); if(showToast) toast('網路異常，請稍後再試','error'); return false; }
 }
 
 async function pullFromGitHub() {
