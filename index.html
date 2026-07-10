@@ -523,6 +523,13 @@ function catOpts(sel) { return CATEGORIES.map(c=>`<option value="${c}" ${c===sel
 
 function updateSeg(idx, field, val) {
   selData.segments[idx][field] = val;
+  // Chain propagation: keep adjacent segments linked
+  if(field==='to' && idx+1 < selData.segments.length) {
+    selData.segments[idx+1].from = val;
+  }
+  if(field==='from' && idx > 0) {
+    selData.segments[idx-1].to = val;
+  }
   // Auto mileage if from+to changed
   if(field==='from'||field==='to') {
     const s = selData.segments[idx];
