@@ -159,6 +159,7 @@ body{font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',system-ui,sans-se
       <option value="吳仕緯">👤 吳仕緯</option>
       <option value="游竣皓">👤 游竣皓</option>
     </select>
+    <button class="btn btn-sm btn-outline" onclick="showHelp()" title="使用說明">?</button>
     <button class="btn btn-sm btn-outline" onclick="syncNow()" title="手動同步到雲端">☁️</button>
     <button class="btn btn-sm btn-outline" onclick="showSettings()">⚙️</button>
     <button class="btn btn-sm btn-primary" onclick="exportExcel()">📥 匯出</button>
@@ -223,7 +224,41 @@ body{font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',system-ui,sans-se
 <!-- Hidden print area -->
 <div class="print-area" id="printArea"></div>
 
-<!-- Settings Modal -->
+<!-- Help Modal -->
+<div class="modal-bg hidden" id="helpModal">
+<div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;font-size:0.85rem;line-height:1.7">
+<h3>📖 使用說明</h3>
+
+<p><strong>🖊️ 每日登錄</strong><br>
+點日曆上任一天 → 路線自動帶入預設模板 → 選交通工具 → 儲存。週末及國定假日自動跳過。</p>
+
+<p><strong>➕ 插入新停靠點</strong><br>
+按「＋ 在此後插入」→ 新點起點自動接上一段終點 → 選迄點即可。</p>
+
+<p><strong>🚗 交通工具</strong><br>
+每天選一次，所有路段共用。切換汽/機車時里程自動更新。預設汽車。</p>
+
+<p><strong>🏖️ 休假 / 請假</strong><br>
+點日期旁的開關關閉 → 當天不算工作天、不列入統計。</p>
+
+<p><strong>📊 月結總覽</strong><br>
+自動計算當月工作天、總里程、預估油資（費率可在 ⚙️ 調整）。</p>
+
+<p><strong>📥 匯出 / 列印</strong><br>
+「📥 匯出」= 完整 Excel（外勤工作表＋申請差旅費，含簽名欄）。<br>
+「🖨️ 列印」= 直接開啟申請差旅費列印頁面。</p>
+
+<p><strong>☁️ 跨裝置同步</strong><br>
+自動透過 Firebase 雲端同步。PC 改完 → 手機打開自動同步。<br>
+按 ☁️ 手動推送、⚙️ → 從雲端拉取（換裝置時用）。</p>
+
+<p><strong>👤 人員切換</strong><br>
+右上角下拉可切換使用者。每人資料獨立、Firebase 分開儲存。</p>
+
+<div class="btn-row" style="margin-top:12px">
+  <button class="btn btn-sm btn-primary" onclick="closeHelp()">知道了</button>
+</div>
+</div></div>
 <div class="modal-bg hidden" id="settingsModal">
 <div class="modal">
 <h3>⚙️ 設定</h3>
@@ -705,6 +740,9 @@ function printReport() {
 }
 
 // ============ SETTINGS ============
+function showHelp(){ document.getElementById('helpModal').classList.remove('hidden'); }
+function closeHelp(){ document.getElementById('helpModal').classList.add('hidden'); }
+
 function showSettings() {
   const cfg=loadCfg();
   document.getElementById('rateBike').value=cfg.rateBike||4;
