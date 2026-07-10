@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>油資申請工具 - 吳仕緯</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
 :root {
   --bg: #faf6f0; --card: #fffdf7; --card2: #f8f2e8;
@@ -228,15 +230,12 @@ body{font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',system-ui,sans-se
 <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">自訂假日 (YYYY-MM-DD，逗號分隔)</label>
 <input type="text" id="customHolidays" placeholder="2026-07-10,2026-07-15" onchange="saveCfg()" style="margin-bottom:12px">
 <hr style="border-color:var(--border);margin:12px 0">
-<h3 style="font-size:0.9rem;margin-bottom:6px">☁️ 跨裝置同步 (GitHub)</h3>
-<label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:4px">GitHub Token（所有裝置輸入相同 Token）</label>
-<input type="password" id="ghToken" placeholder="ghp_..." onchange="saveSyncCfg()" style="margin-bottom:8px;font-size:0.8rem">
+<h3 style="font-size:0.9rem;margin-bottom:6px">☁️ 跨裝置同步 (Firebase)</h3>
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-  <button class="btn btn-sm btn-outline" id="syncToggleBtn" onclick="toggleSync()" style="font-size:0.75rem">🔗 啟用同步</button>
   <span id="syncStatus" style="font-size:0.7rem;color:var(--muted)"></span>
 </div>
-<button class="btn btn-sm btn-outline" onclick="pullFromGitHub().then(ok=>{if(ok){renderCalendar();renderEditor();toast('✅ 已從雲端同步','success');}})" style="font-size:0.75rem;margin-top:4px">⬇️ 從雲端拉取（換裝置時按）</button>
-<p style="font-size:0.65rem;color:var(--muted);margin-top:6px">💡 跨裝置用法：PC 打完行程自動上傳雲端 → 手機開網頁 → 按此鈕拉取最新資料。Token 只需 repo 權限，每台裝置輸入相同 Token。</p>
+<button class="btn btn-sm btn-outline" onclick="pullFromFirebase(true).then(ok=>{if(ok){renderCalendar();renderEditor();}})" style="font-size:0.75rem;margin-top:4px">⬇️ 從雲端拉取（換裝置時按）</button>
+<p style="font-size:0.65rem;color:var(--muted);margin-top:6px">💡 自動同步，無需 Token！PC 打完行程自動上傳 → 手機開網頁自動拉取。</p>
 <div class="btn-row" style="margin-top:12px">
   <button class="btn btn-sm btn-primary" onclick="closeSettings()">完成</button>
   <button class="btn btn-sm btn-danger" onclick="clearAll()">⚠️ 清除資料</button>
@@ -300,121 +299,69 @@ let curY = new Date().getFullYear(), curM = new Date().getMonth();
 let selDate = todayStr();
 let selData = null; // {enabled, segments:[{from,to,km,cat,v}]}
 
-// ============ DATA STORE (localStorage + GitHub Sync) ============
-const GITHUB_REPO = 'duck0420/oil-tool';
-const GITHUB_API = 'https://api.github.com';
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCtC4L_94AsCntFqwIOuWIotPcCy9Dt7tQ",
+  authDomain: "oil-tool-502013.firebaseapp.com",
+  databaseURL: "https://oil-tool-502013-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "oil-tool-502013",
+  storageBucket: "oil-tool-502013.firebasestorage.app",
+  messagingSenderId: "872149682865",
+  appId: "1:872149682865:web:1e53e9de36b1952eddf090"
+};
+
+// ============ DATA STORE (localStorage + Firebase Sync) ============
+let _syncTimer = null, _db = null;
+
+function initFirebase() {
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    _db = firebase.database();
+  } catch(e) {}
+}
 
 function dbKey() { return `oil_${curY}-${String(curM+1).padStart(2,'0')}`; }
 function loadMonth() { try{return JSON.parse(localStorage.getItem(dbKey())||'{}');}catch(e){return {};} }
-function saveMonth(data) { localStorage.setItem(dbKey(), JSON.stringify(data)); syncToGitHub(); }
+function saveMonth(data) { localStorage.setItem(dbKey(), JSON.stringify(data)); syncToCloud(); }
 function loadCfg() { try{return JSON.parse(localStorage.getItem('oil_cfg')||'{}');}catch(e){return {};} }
-function saveCfgData(d) { localStorage.setItem('oil_cfg', JSON.stringify(d)); syncCfgToGitHub(); }
+function saveCfgData(d) { localStorage.setItem('oil_cfg', JSON.stringify(d)); syncToCloud(); }
 
-// ==== GitHub Cloud Sync ====
-let _syncTimer = null;
-
-function getGitHubToken() {
-  return (localStorage.getItem('oil_gh_token') || '').trim();
-}
-
-function isSyncEnabled() {
-  return localStorage.getItem('oil_sync_enabled') === 'true' && !!getGitHubToken();
-}
-
-// Proper UTF-8 base64 encode/decode (no deprecated unescape/escape)
-function utf8ToBase64(str) {
-  const bytes = new TextEncoder().encode(str);
-  let binary = '';
-  bytes.forEach(b => binary += String.fromCharCode(b));
-  return btoa(binary);
-}
-function base64ToUtf8(b64) {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
-}
-
-async function syncToGitHub(showToastFlag) {
-  if (!isSyncEnabled()) return;
-  clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(() => _doSync(showToastFlag), 500);
-}
-
-async function syncCfgToGitHub() {
-  if (!isSyncEnabled()) return;
-  await _doSync(false);
-}
-
-async function syncNow() {
-  if (!isSyncEnabled()) { toast('請先在設定啟用同步','error'); return; }
-  toast('☁️ 正在上傳到雲端...');
-  const ok = await _doSync(true);
-  if (ok) toast('✅ 已同步到雲端','success');
-  else toast('❌ 同步失敗，請檢查網路或 Token','error');
-}
-
-async function _doSync(showToast) {
-  const token = getGitHubToken();
-  if (!token) return false;
+// ==== Firebase Sync ====
+async function syncToFirebase(showToast) {
+  if (!_db) return;
   try {
     const all = {};
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (k.startsWith('oil_')) all[k] = JSON.parse(localStorage.getItem(k));
     }
-    const content = utf8ToBase64(JSON.stringify(all));
-    
-    let sha = '';
-    try {
-      const getResp = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/data.json`, {
-        headers: { 'Cache-Control': 'no-cache' }
-      });
-      if (getResp.ok) {
-        // Get SHA via API for the update
-        const shaResp = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
-          headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' }
-        });
-        if (shaResp.ok) { const d = await shaResp.json(); sha = d.sha; }
-      }
-    } catch(e) {}
-
-    const body = JSON.stringify({ message: 'auto sync', content, sha: sha || undefined, branch: 'main' });
-    const putResp = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
-      method: 'PUT',
-      headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github+json' },
-      body
-    });
-    if (!putResp.ok) {
-      if (showToast) {
-        if (putResp.status === 401) toast('Token 無效，請重新產生','error');
-        else if (putResp.status === 403) toast('Token 權限不足，需勾選 repo','error');
-        else toast('上傳失敗 (HTTP '+putResp.status+')','error');
-      }
-      return false;
-    }
-    return true;
-  } catch(e) { console.error('sync failed:', e); if(showToast) toast('網路異常，請稍後再試','error'); return false; }
+    await _db.ref('/oil-tool').set(all);
+    if (showToast) toast('✅ 已同步到雲端','success');
+  } catch(e) { if (showToast) toast('❌ 同步失敗','error'); }
 }
 
-async function pullFromGitHub() {
-  const token = getGitHubToken();
-  if (!token) { toast('請先在設定輸入 GitHub Token','error'); return false; }
+async function pullFromFirebase(showToast) {
+  if (!_db) return false;
   try {
-    // Use raw URL for reading — avoids CORS preflight issues on mobile
-    const resp = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/data.json`, {
-      headers: { 'Cache-Control': 'no-cache' }
-    });
-    if (!resp.ok) {
-      if (resp.status === 404) { toast('雲端尚無資料，請先儲存行程後同步','error'); return false; }
-      toast('拉取失敗 (HTTP '+resp.status+')','error'); return false;
-    }
-    const all = await resp.json();
+    const snap = await _db.ref('/oil-tool').once('value');
+    const all = snap.val() || {};
     for (const [k, v] of Object.entries(all)) {
       localStorage.setItem(k, JSON.stringify(v));
     }
+    if (showToast) toast('✅ 已從雲端同步','success');
     return true;
-  } catch(e) { console.error('pull failed:', e); toast('網路錯誤，請稍後再試','error'); return false; }
+  } catch(e) { if (showToast) toast('❌ 拉取失敗','error'); return false; }
+}
+
+function syncToCloud() {
+  if (!_db) return;
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => syncToFirebase(false), 500);
+}
+
+async function syncNow() {
+  if (!_db) { toast('Firebase 尚未連線','error'); return; }
+  toast('☁️ 同步中...');
+  await syncToFirebase(true);
 }
 
 function getDay(date) {
@@ -751,8 +698,7 @@ function showSettings() {
   document.getElementById('rateBike').value=cfg.rateBike||4;
   document.getElementById('rateCar').value=cfg.rateCar||8;
   document.getElementById('customHolidays').value=(cfg.customHolidays||[]).join(',');
-  document.getElementById('ghToken').value = getGitHubToken();
-  updateSyncUI();
+  document.getElementById('syncStatus').textContent = _db ? '✅ 已連線，自動同步中' : '⚠️ Firebase 未連線';
   document.getElementById('settingsModal').classList.remove('hidden');
 }
 function closeSettings(){document.getElementById('settingsModal').classList.add('hidden');renderStats();}
@@ -763,24 +709,6 @@ function saveCfg(){
     customHolidays:document.getElementById('customHolidays').value.split(',').map(s=>s.trim()).filter(Boolean)
   });
   renderStats();
-}
-function saveSyncCfg(){
-  localStorage.setItem('oil_gh_token', document.getElementById('ghToken').value);
-  updateSyncUI();
-}
-function toggleSync(){
-  const cur = localStorage.getItem('oil_sync_enabled') === 'true';
-  localStorage.setItem('oil_sync_enabled', cur ? 'false' : 'true');
-  updateSyncUI();
-  if(!cur) syncToGitHub(); // push immediately when enabling
-}
-function updateSyncUI(){
-  const enabled = isSyncEnabled();
-  const hasToken = !!getGitHubToken();
-  document.getElementById('syncToggleBtn').textContent = enabled ? '🔗 同步已啟用' : '🔗 啟用同步';
-  document.getElementById('syncToggleBtn').style.background = enabled ? 'var(--green)' : '';
-  document.getElementById('syncToggleBtn').style.color = enabled ? '#fff' : '';
-  document.getElementById('syncStatus').textContent = enabled ? '✅ 自動同步中' : (hasToken ? '已輸入 Token' : '請輸入 Token');
 }
 function clearAll(){
   if(!confirm('確定清除所有資料？'))return;
@@ -804,32 +732,9 @@ function toast(msg,type='') {
 }
 
 // ============ INIT ============
+initFirebase();
 (async function(){
-  // Preload June 23 data (建新保稅倉路線)
-  const june23data = {"enabled":true,"vehicle":"汽車","segments":[
-    {"from":"台中分公司","to":"關務署台中關","km":20.2,"cat":"總部至海關文件"},
-    {"from":"關務署台中關","to":"陽明海運梧棲辦公室","km":3.4,"cat":"查看有無文件可取回"},
-    {"from":"陽明海運梧棲辦公室","to":"安舫船務","km":1,"cat":"查看有無文件可取回"},
-    {"from":"安舫船務","to":"建中船務","km":0.52,"cat":"查看有無文件可取回"},
-    {"from":"建中船務","to":"龍鑫船務","km":0.052,"cat":"查看有無文件可取回"},
-    {"from":"龍鑫船務","to":"國耀船務","km":1.1,"cat":"查看有無文件可取回"},
-    {"from":"國耀船務","to":"顗泰船務","km":2,"cat":"查看有無文件可取回"},
-    {"from":"顗泰船務","to":"關務署台中關","km":2,"cat":"查看有無文件可取回"},
-    {"from":"關務署台中關","to":"中國貨櫃","km":7.2,"cat":"櫃場作業"},
-    {"from":"中國貨櫃","to":"關務署台中關","km":7.2,"cat":"回海關"},
-    {"from":"關務署台中關","to":"建新保稅倉","km":3.5,"cat":"櫃場作業"},
-    {"from":"建新保稅倉","to":"中國貨櫃場","km":3.5,"cat":"櫃場作業"}
-  ]};
-  try {
-    let june = JSON.parse(localStorage.getItem('oil_2026-6')||'{}');
-    june['2026-06-23'] = june23data;
-    localStorage.setItem('oil_2026-6', JSON.stringify(june));
-  } catch(e) {}
-
-  if(isSyncEnabled()) {
-    const ok = await pullFromGitHub();
-    if(ok) console.log('synced from cloud');
-  }
+  if(_db) { await pullFromFirebase(false); }
   selData=getDay(selDate);
   renderCalendar();
   renderEditor();
