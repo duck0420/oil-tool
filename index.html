@@ -289,6 +289,7 @@ let APPLICANT = '吳仕緯'; // current person, dynamic
 
 function currentPerson() { return APPLICANT; }
 function personKey(k) { return `oil_${APPLICANT}_${k}`; }
+function getDefaultVehicle() { return APPLICANT === '游竣皓' ? '機車' : '汽車'; }
 
 // Default daily template — 里程不分汽機車，距離相同
 const TEMPLATE = [
@@ -415,7 +416,7 @@ function getDay(date) {
   const isWeekend = dow===0||dow===6;
   const isHoliday = !!TW_HOLIDAYS[date];
   const enabled = !isWeekend && !isHoliday;
-  return {enabled, vehicle:'汽車', segments: enabled ? JSON.parse(JSON.stringify(TEMPLATE)) : []};
+  return {enabled, vehicle: getDefaultVehicle(), segments: enabled ? JSON.parse(JSON.stringify(TEMPLATE)) : []};
 }
 
 function setDay(date, data) {
@@ -600,7 +601,7 @@ function toggleDay() {
   selData.enabled = !selData.enabled;
   if(selData.enabled && (!selData.segments||selData.segments.length===0)) {
     selData.segments = JSON.parse(JSON.stringify(TEMPLATE));
-    selData.vehicle = '汽車';
+    selData.vehicle = getDefaultVehicle();
   }
   setDay(selDate, selData);
   selData = getDay(selDate);
@@ -785,6 +786,7 @@ async function switchPerson(name) {
   selDate = todayStr();
   if(_db) { await pullFromFirebase(false); }
   selData = getDay(selDate);
+  selData.vehicle = getDefaultVehicle();
   renderCalendar();
   renderEditor();
 }
