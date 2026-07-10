@@ -314,7 +314,7 @@ function saveCfgData(d) { localStorage.setItem('oil_cfg', JSON.stringify(d)); sy
 let _syncTimer = null;
 
 function getGitHubToken() {
-  return localStorage.getItem('oil_gh_token') || '';
+  return (localStorage.getItem('oil_gh_token') || '').trim();
 }
 
 function isSyncEnabled() {
@@ -396,7 +396,9 @@ async function pullFromGitHub() {
     });
     if (!resp.ok) {
       if (resp.status === 404) { toast('雲端尚無資料，請先儲存行程後同步','error'); return false; }
-      toast('同步失敗，請檢查 Token 是否正確','error'); return false;
+      if (resp.status === 401) { toast('Token 無效或過期 (401)，請重新產生','error'); return false; }
+      if (resp.status === 403) { toast('Token 權限不足 (403)，需勾選 repo 權限','error'); return false; }
+      toast('同步失敗 (HTTP '+resp.status+')，請檢查網路或 Token','error'); return false;
     }
     const d = await resp.json();
     const all = JSON.parse(base64ToUtf8(d.content));
