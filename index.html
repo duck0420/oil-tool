@@ -518,8 +518,13 @@ function addSegment(atIdx) {
   if(!selData.segments) selData.segments = [];
   if(!selData.enabled) { selData.enabled=true; }
   const s = {from:'',to:'',km:0,cat:'查看有無文件可取回'};
-  if(atIdx===undefined || atIdx>=selData.segments.length) {
-    if(selData.segments.length>0) s.from = selData.segments[selData.segments.length-1].to;
+  // Auto-fill from: previous segment's "to"
+  if(atIdx > 0 && atIdx <= selData.segments.length && selData.segments[atIdx-1]) {
+    s.from = selData.segments[atIdx-1].to;
+  } else if(atIdx === undefined || atIdx >= selData.segments.length) {
+    if(selData.segments.length > 0) s.from = selData.segments[selData.segments.length-1].to;
+  }
+  if(atIdx === undefined || atIdx >= selData.segments.length) {
     selData.segments.push(s);
   } else {
     selData.segments.splice(atIdx, 0, s);
