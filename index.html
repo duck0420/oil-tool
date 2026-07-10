@@ -391,17 +391,15 @@ async function pullFromGitHub() {
   const token = getGitHubToken();
   if (!token) { toast('請先在設定輸入 GitHub Token','error'); return false; }
   try {
-    const resp = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/contents/data.json`, {
-      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' }
+    // Use raw URL for reading — avoids CORS preflight issues on mobile
+    const resp = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/data.json`, {
+      headers: { 'Cache-Control': 'no-cache' }
     });
     if (!resp.ok) {
       if (resp.status === 404) { toast('雲端尚無資料，請先儲存行程後同步','error'); return false; }
-      if (resp.status === 401) { toast('Token 無效或過期 (401)，請重新產生','error'); return false; }
-      if (resp.status === 403) { toast('Token 權限不足 (403)，需勾選 repo 權限','error'); return false; }
-      toast('同步失敗 (HTTP '+resp.status+')，請檢查網路或 Token','error'); return false;
+      toast('拉取失敗 (HTTP '+resp.status+')','error'); return false;
     }
-    const d = await resp.json();
-    const all = JSON.parse(base64ToUtf8(d.content));
+    const all = await resp.json();
     for (const [k, v] of Object.entries(all)) {
       localStorage.setItem(k, JSON.stringify(v));
     }
