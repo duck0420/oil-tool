@@ -747,16 +747,20 @@ function printReport() {
   
   const agg={};
   allTrips.forEach(t=>{
-    const k=`${t.from}|||${t.to}|||${t.vehicle}`;
-    if(!agg[k]) agg[k]={from:t.from,to:t.to,v:t.vehicle,km:t.km,cnt:0};
+    const k=`${t.from}|||${t.to}`;
+    if(!agg[k]) agg[k]={from:t.from,to:t.to,km:t.km,cnt:0};
     agg[k].cnt++;
   });
+  const routes=Object.values(agg);
   
-  let tbody='',tCnt=0,tKm=0,tAmt=0;
-  for(const [k,v] of Object.entries(agg)) {
-    const tk=v.km*v.cnt*ROUND_TRIP, rate=v.v==='機車'?rBike:rCar, amt=tk*rate;
-    tCnt+=tripCount; tKm+=tk; tAmt+=amt;
-    tbody+=`<tr><td>${v.from}</td><td>${v.to}</td><td>${v.v}</td><td>${v.km}</td><td>${v.cnt}</td><td>${Math.round(tk*100)/100}</td><td>${Math.round(amt)}</td></tr>`;
+  let tbody='',tCnt=0,tKm=0;
+  for(let i=0;i<routes.length;i++){
+    const v=routes[i];
+    const tripCount = v.from==='台中分公司'&&v.to==='關務署台中關' ? v.cnt : v.cnt*ROUND_TRIP;
+    const tk=v.km*tripCount;
+    tCnt+=tripCount; tKm+=tk;
+    const fromDisplay = (i>0 && routes[i-1].from===v.from) ? '' : v.from;
+    tbody+=`<tr><td>${fromDisplay}</td><td>${v.to}</td><td>${v.km}</td><td>${tripCount}</td><td>${Math.round(tk*100)/100}</td></tr>`;
   }
   
   const printHTML = `
