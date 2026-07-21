@@ -319,6 +319,24 @@ const MILEAGE = {
   '中國貨櫃|關務署台中關':{機車:7.2,汽車:7.2},
   '建新保稅倉|中國貨櫃場':{機車:3.5,汽車:3.5},
   '中國貨櫃場|建新保稅倉':{機車:3.5,汽車:3.5},
+  '關務署台中關|建新櫃場':{機車:1.8,汽車:1.8},
+  '建新櫃場|關務署台中關':{機車:1.8,汽車:1.8},
+  '建新櫃場|31碼頭':{機車:4,汽車:4},
+  '31碼頭|建新櫃場':{機車:4,汽車:4},
+  '31碼頭|32碼頭':{機車:1.2,汽車:1.2},
+  '32碼頭|31碼頭':{機車:1.2,汽車:1.2},
+  '32碼頭|34碼頭':{機車:0.6,汽車:0.6},
+  '34碼頭|32碼頭':{機車:0.6,汽車:0.6},
+  '34碼頭|關務署台中關':{機車:3.3,汽車:3.3},
+  '關務署台中關|34碼頭':{機車:3.3,汽車:3.3},
+  '關務署台中關|建新保稅倉':{機車:5.3,汽車:5.3},
+  '建新保稅倉|關務署台中關':{機車:5.3,汽車:5.3},
+  '建新保稅倉|31碼頭':{機車:8.1,汽車:8.1},
+  '31碼頭|建新保稅倉':{機車:8.1,汽車:8.1},
+  '關務署台中關|引春保稅倉':{機車:3.9,汽車:3.9},
+  '引春保稅倉|關務署台中關':{機車:3.9,汽車:3.9},
+  '引春保稅倉|31碼頭':{機車:3.7,汽車:3.7},
+  '31碼頭|引春保稅倉':{機車:3.7,汽車:3.7},
 };
 const LOCATIONS = [...new Set(Object.keys(MILEAGE).flatMap(k=>k.split('|')))].sort();
 const CATEGORIES = ['銀行背書','送報單','送帳單','拿稅單','銀行繳稅','送稅單','取快遞文件','取送廠驗准單','拿退帳單','總部至海關文件','海關至總部文件','取封條','送封條','送光碟','取送報廢清冊','貨櫃運送單白聯','OP給廠商文件','廠商給OP文件','業務給廠商文件','廠商給海關之文件','送異常單','抓線扣稅單收據','列印報單','送桌曆 筆記本','查看有無文件可取回','發進口文件給OP','edi收據','進口證明聯','送空白貨櫃運送單','櫃場繳費','C3驗貨','櫃場作業','回海關'];
@@ -508,7 +526,7 @@ function renderEditor() {
         <select onchange="updateSeg(${i},'from',this.value)">${locOpts(s.from)}</select>
         <span class="arrow">→</span>
         <select onchange="updateSeg(${i},'to',this.value)">${locOpts(s.to)}</select>
-        <input class="seg-km" type="number" step="0.01" value="${s.km}" onchange="updateSeg(${i},'km',parseFloat(this.value)||0)" title="里程">
+        <input class="seg-km" type="number" step="0.01" value="${s.km}" onchange="updateSeg(${i},'km',parseFloat(this.value)||0)" title="里程" style="${s.from&&s.to&&!MILEAGE[s.from+'|'+s.to]?'border:2px solid var(--red);background:#fff0f0':''}">
         <select class="seg-cat" onchange="updateSeg(${i},'cat',this.value)">${catOpts(s.cat)}</select>
       </div>
       <button class="del-btn" onclick="removeSeg(${i})">✕</button>
