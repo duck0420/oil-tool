@@ -335,8 +335,12 @@ const MILEAGE = {
   '31碼頭|建新保稅倉':{機車:8.1,汽車:8.1},
   '關務署台中關|引春保稅倉':{機車:3.9,汽車:3.9},
   '引春保稅倉|關務署台中關':{機車:3.9,汽車:3.9},
-  '引春保稅倉|31碼頭':{機車:3.7,汽車:3.7},
-  '31碼頭|引春保稅倉':{機車:3.7,汽車:3.7},
+  '引春保稅倉|34碼頭':{機車:3.7,汽車:3.7},
+  '34碼頭|引春保稅倉':{機車:3.7,汽車:3.7},
+  '34碼頭|華城重電':{機車:4.3,汽車:4.3},
+  '華城重電|34碼頭':{機車:4.3,汽車:4.3},
+  '華城重電|關務署台中關':{機車:2,汽車:2},
+  '關務署台中關|華城重電':{機車:2,汽車:2},
 };
 const LOCATIONS = [...new Set(Object.keys(MILEAGE).flatMap(k=>k.split('|')))].sort();
 const CATEGORIES = ['銀行背書','送報單','送帳單','拿稅單','銀行繳稅','送稅單','取快遞文件','取送廠驗准單','拿退帳單','總部至海關文件','海關至總部文件','取封條','送封條','送光碟','取送報廢清冊','貨櫃運送單白聯','OP給廠商文件','廠商給OP文件','業務給廠商文件','廠商給海關之文件','送異常單','抓線扣稅單收據','列印報單','送桌曆 筆記本','查看有無文件可取回','發進口文件給OP','edi收據','進口證明聯','送空白貨櫃運送單','櫃場繳費','C3驗貨','櫃場作業','回海關'];
@@ -646,7 +650,7 @@ function renderStats() {
     const v = data.vehicle || '汽車';
     data.segments.forEach(s=>{
       tripSegs++;
-      const count = (s.from==='台中分公司'&&s.to==='關務署台中關') ? 1 : ROUND_TRIP;
+      const count = s.cnt || ((s.from==='台中分公司'&&s.to==='關務署台中關') ? 1 : ROUND_TRIP);
       const km = s.km * count;
       totalKm+=km;
       if(v==='機車') bikeKm+=km; else carKm+=km;
@@ -692,13 +696,13 @@ function exportExcel() {
   
   // Sheet 1: 外勤工作表
   let rows1=[['外勤日期','姓名','交通工具','起點/地點名稱','迄點/地點名稱','類別','次數','里程數','備註']];
-  allTrips.forEach(t=>rows1.push([t.date,APPLICANT,t.vehicle,t.from,t.to,t.cat,(t.from==='台中分公司'&&t.to==='關務署台中關'?1:ROUND_TRIP),t.km,'']));
+  allTrips.forEach(t=>rows1.push([t.date,APPLICANT,t.vehicle,t.from,t.to,t.cat,t.cnt||(t.from==='台中分公司'&&t.to==='關務署台中關'?1:ROUND_TRIP),t.km,'']));
   
   // Sheet 2: 申請差旅費 — matches original pivot format
   // Aggregate: from|to|km → {car:{cnt,km}, bike:{cnt,km}}
   const agg={};
   allTrips.forEach(t=>{
-    const count = (t.from==='台中分公司'&&t.to==='關務署台中關'?1:ROUND_TRIP);
+    const count = t.cnt || (t.from==='台中分公司'&&t.to==='關務署台中關'?1:ROUND_TRIP);
     const k=`${t.from}|||${t.to}|||${t.km}`;
     if(!agg[k]) agg[k]={from:t.from,to:t.to,km:t.km,carC:0,carK:0,bikeC:0,bikeK:0};
     if(t.vehicle==='汽車'){agg[k].carC+=count;agg[k].carK+=t.km*count;}
