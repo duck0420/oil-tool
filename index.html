@@ -693,27 +693,40 @@ function exportExcel() {
   let rows1=[['外勤日期','姓名','交通工具','起點/地點名稱','迄點/地點名稱','類別','次數','里程數','備註']];
   allTrips.forEach(t=>rows1.push([t.date,APPLICANT,t.vehicle,t.from,t.to,t.cat,(t.from==='台中分公司'&&t.to==='關務署台中關'?1:ROUND_TRIP),t.km,'']));
   
-  // Sheet 2 (aggregated)
+  // Sheet 2 (申請差旅費) — matches original Excel format
+  // Group by 起點→迄點 (vehicle-agnostic, like original)
   const agg={};
   allTrips.forEach(t=>{
-    const k=`${t.from}|||${t.to}|||${t.vehicle}`;
-    if(!agg[k]) agg[k]={from:t.from,to:t.to,v:t.vehicle,km:t.km,cnt:0};
+    const k=`${t.from}|||${t.to}`;
+    if(!agg[k]) agg[k]={from:t.from,to:t.to,km:t.km,cnt:0};
     agg[k].cnt++;
   });
+  const routes=Object.values(agg);
   
-  let rows2=[['起點/地點名稱','迄點/地點名稱','交通工具','里程數','1.次數','2.里程數','申請金額']];
-  let tCnt=0,tKm=0,tAmt=0;
-  for(const [k,v] of Object.entries(agg)) {
+  // Header rows like original
+  let rows2=[];
+  rows2.push(['','','','','','','','']); // spacer
+  rows2.push(['姓名',APPLICANT]);
+  rows2.push(['','','','交通工具','資料']);
+  rows2.push(['','','','機車','']);
+  rows2.push(['起點/地點名稱','迄點/地點名稱','里程數','1.次數','2.里程數','','','']);
+  
+  let tCnt=0,tKm=0;
+  for(let i=0;i<routes.length;i++){
+    const v=routes[i];
     const tripCount = v.from==='台中分公司'&&v.to==='關務署台中關' ? v.cnt : v.cnt*ROUND_TRIP;
     const tk=v.km*tripCount;
-    const rate=v.v==='機車'?rBike:rCar;
-    const amt=tk*rate;
-    tCnt+=tripCount; tKm+=tk; tAmt+=amt;
-    rows2.push([v.from,v.to,v.v,v.km,v.cnt*ROUND_TRIP,Math.round(tk*100)/100,Math.round(amt)]);
+    tCnt+=tripCount; tKm+=tk;
+    // Group same 起點: blank out 起點 for subsequent rows with same origin
+    const fromDisplay = (i>0 && routes[i-1].from===v.from) ? '' : v.from;
+    rows2.push([fromDisplay,v.to,v.km,tripCount,Math.round(tk*100)/100,'','','']);
   }
-  rows2.push([],['總計','','','',tCnt,Math.round(tKm*100)/100,Math.round(tAmt)],[],
-    ['申請人:',APPLICANT],[],['簽名欄:'],
-    ['理級主管','','課級主管','','申請人員','','']);
+  rows2.push([]);
+  rows2.push(['總計','','',tCnt,Math.round(tKm*100)/100,'','','']);
+  rows2.push([]);
+  rows2.push(['','','','','','','','']);
+  rows2.push(['簽名欄:']);
+  rows2.push(['理級主管','','','課級主管','','','申請人員','']);
   
   const wb=XLSX.utils.book_new();
   const ws1=XLSX.utils.aoa_to_sheet(rows1);
