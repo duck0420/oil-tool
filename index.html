@@ -646,7 +646,8 @@ function renderStats() {
     const v = data.vehicle || '汽車';
     data.segments.forEach(s=>{
       tripSegs++;
-      const km = s.km * ROUND_TRIP;
+      const count = (s.from==='台中分公司'&&s.to==='關務署台中關') ? 1 : ROUND_TRIP;
+      const km = s.km * count;
       totalKm+=km;
       if(v==='機車') bikeKm+=km; else carKm+=km;
     });
