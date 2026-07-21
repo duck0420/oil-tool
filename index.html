@@ -732,7 +732,7 @@ function exportExcel() {
   const ws1=XLSX.utils.aoa_to_sheet(rows1);
   const ws2=XLSX.utils.aoa_to_sheet(rows2);
   ws1['!cols']=[{wch:12},{wch:10},{wch:8},{wch:22},{wch:22},{wch:18},{wch:6},{wch:10},{wch:15}];
-  ws2['!cols']=[{wch:22},{wch:22},{wch:8},{wch:10},{wch:8},{wch:10},{wch:12}];
+  ws2['!cols']=[{wch:22},{wch:22},{wch:10},{wch:10},{wch:12},{wch:10},{wch:10},{wch:10}];
   XLSX.utils.book_append_sheet(wb,ws1,'外勤工作表');
   XLSX.utils.book_append_sheet(wb,ws2,'申請差旅費');
   XLSX.writeFile(wb,`${curY}年${curM+1}月外勤工作報表_${APPLICANT}.xlsx`);
@@ -768,8 +768,8 @@ function printReport() {
     @media print{body{padding:10px}}</style>
     <h2>申請差旅費 - ${curY}年${curM+1}月</h2>
     <p class="sub">申請人：${APPLICANT}</p>
-    <table><thead><tr><th>起點</th><th>迄點</th><th>交通</th><th>里程</th><th>次數</th><th>總里程</th><th>金額</th></tr></thead>
-    <tbody>${tbody}<tr style="font-weight:bold;background:#f5f0e8"><td colspan="4">總計</td><td>${tCnt}</td><td>${Math.round(tKm*100)/100}</td><td>${Math.round(tAmt)}</td></tr></tbody></table>
+    <table><thead><tr><th>起點</th><th>迄點</th><th>里程</th><th>次數</th><th>總里程</th></tr></thead>
+    <tbody>${tbody}<tr style="font-weight:bold;background:#f5f0e8"><td colspan="3">總計</td><td>${tCnt}</td><td>${Math.round(tKm*100)/100}</td><td>${Math.round(tAmt)}</td></tr></tbody></table>
     <div class="sig"><div><div class="line">理級主管</div></div><div><div class="line">課級主管</div></div><div><div class="line">申請人員</div></div></div>
   `;
   
