@@ -301,34 +301,36 @@ const TEMPLATE = [
   {from:'龍鑫船務',to:'國耀船務',km:1.1,cat:'查看有無文件可取回'},
   {from:'國耀船務',to:'顗泰船務',km:2,cat:'查看有無文件可取回'},
   {from:'顗泰船務',to:'關務署台中關',km:2,cat:'查看有無文件可取回'},
-  {from:'關務署台中關',to:'中國貨櫃',km:7.2,cat:'櫃場作業'},
-  {from:'中國貨櫃',to:'關務署台中關',km:7.2,cat:'回海關'},
+  {from:'關務署台中關',to:'31碼頭',km:3.6,cat:'櫃場作業'},
+  {from:'31碼頭',to:'32碼頭',km:1.2,cat:'櫃場作業'},
+  {from:'32碼頭',to:'34碼頭',km:0.6,cat:'櫃場作業'},
+  {from:'34碼頭',to:'關務署台中關',km:3.3,cat:'回海關'},
 ];
 
 // Mileage DB — same for both vehicles, distance doesn't change
 const MILEAGE = {
   '台中分公司|關務署台中關':{機車:20.2,汽車:20.2},
-  '關務署台中關|陽明海運梧棲辦公室':{機車:3.4,汽車:3.4},
-  '陽明海運梧棲辦公室|安舫船務':{機車:1,汽車:1},
-  '安舫船務|建中船務':{機車:0.52,汽車:0.52},
-  '建中船務|龍鑫船務':{機車:0.052,汽車:0.052},
-  '龍鑫船務|國耀船務':{機車:1.1,汽車:1.1},
-  '國耀船務|顗泰船務':{機車:2,汽車:2},
-  '顗泰船務|關務署台中關':{機車:2,汽車:2},
-  '關務署台中關|中國貨櫃':{機車:7.2,汽車:7.2},
-  '中國貨櫃|關務署台中關':{機車:7.2,汽車:7.2},
-  '建新保稅倉|中國貨櫃場':{機車:3.5,汽車:3.5},
-  '中國貨櫃場|建新保稅倉':{機車:3.5,汽車:3.5},
-  '關務署台中關|建新櫃場':{機車:1.8,汽車:1.8},
-  '建新櫃場|關務署台中關':{機車:1.8,汽車:1.8},
-  '建新櫃場|31碼頭':{機車:4,汽車:4},
-  '31碼頭|建新櫃場':{機車:4,汽車:4},
+  '關務署台中關|陽明海運梧棲辦公室':{機車:1.7,汽車:1.7},
+  '陽明海運梧棲辦公室|安舫船務':{機車:0.5,汽車:0.5},
+  '安舫船務|建中船務':{機車:0.26,汽車:0.26},
+  '建中船務|龍鑫船務':{機車:0.026,汽車:0.026},
+  '龍鑫船務|國耀船務':{機車:0.55,汽車:0.55},
+  '國耀船務|顗泰船務':{機車:1,汽車:1},
+  '顗泰船務|關務署台中關':{機車:1,汽車:1},
   '31碼頭|32碼頭':{機車:1.2,汽車:1.2},
   '32碼頭|31碼頭':{機車:1.2,汽車:1.2},
   '32碼頭|34碼頭':{機車:0.6,汽車:0.6},
   '34碼頭|32碼頭':{機車:0.6,汽車:0.6},
   '34碼頭|關務署台中關':{機車:3.3,汽車:3.3},
   '關務署台中關|34碼頭':{機車:3.3,汽車:3.3},
+  '關務署台中關|31碼頭':{機車:3.6,汽車:3.6},
+  '31碼頭|關務署台中關':{機車:3.6,汽車:3.6},
+  '建新保稅倉|中國貨櫃場':{機車:3.5,汽車:3.5},
+  '中國貨櫃場|建新保稅倉':{機車:3.5,汽車:3.5},
+  '關務署台中關|建新櫃場':{機車:1.8,汽車:1.8},
+  '建新櫃場|關務署台中關':{機車:1.8,汽車:1.8},
+  '建新櫃場|31碼頭':{機車:4,汽車:4},
+  '31碼頭|建新櫃場':{機車:4,汽車:4},
   '關務署台中關|建新保稅倉':{機車:5.3,汽車:5.3},
   '建新保稅倉|關務署台中關':{機車:5.3,汽車:5.3},
   '建新保稅倉|31碼頭':{機車:8.1,汽車:8.1},
@@ -340,7 +342,7 @@ const MILEAGE = {
 };
 const LOCATIONS = [...new Set(Object.keys(MILEAGE).flatMap(k=>k.split('|')))].sort();
 const CATEGORIES = ['銀行背書','送報單','送帳單','拿稅單','銀行繳稅','送稅單','取快遞文件','取送廠驗准單','拿退帳單','總部至海關文件','海關至總部文件','取封條','送封條','送光碟','取送報廢清冊','貨櫃運送單白聯','OP給廠商文件','廠商給OP文件','業務給廠商文件','廠商給海關之文件','送異常單','抓線扣稅單收據','列印報單','送桌曆 筆記本','查看有無文件可取回','發進口文件給OP','edi收據','進口證明聯','送空白貨櫃運送單','櫃場繳費','C3驗貨','櫃場作業','回海關'];
-const ROUND_TRIP = 2; // 每次來回算 2 趟
+const ROUND_TRIP = 2; // 每次來回算 2 趟. 台中分公司→關務署台中關例外只算1趟
 
 // Taiwan 2026-2027 holidays
 const TW_HOLIDAYS = {
@@ -691,7 +693,7 @@ function exportExcel() {
   
   // Sheet 1
   let rows1=[['外勤日期','姓名','交通工具','起點/地點名稱','迄點/地點名稱','類別','次數','里程數','備註']];
-  allTrips.forEach(t=>rows1.push([t.date,APPLICANT,t.vehicle,t.from,t.to,t.cat,ROUND_TRIP,t.km,'']));
+  allTrips.forEach(t=>rows1.push([t.date,APPLICANT,t.vehicle,t.from,t.to,t.cat,(t.from==='台中分公司'&&t.to==='關務署台中關'?1:ROUND_TRIP),t.km,'']));
   
   // Sheet 2 (aggregated)
   const agg={};
@@ -704,10 +706,11 @@ function exportExcel() {
   let rows2=[['起點/地點名稱','迄點/地點名稱','交通工具','里程數','1.次數','2.里程數','申請金額']];
   let tCnt=0,tKm=0,tAmt=0;
   for(const [k,v] of Object.entries(agg)) {
-    const tk=v.km*v.cnt*ROUND_TRIP;
+    const tripCount = v.from==='台中分公司'&&v.to==='關務署台中關' ? v.cnt : v.cnt*ROUND_TRIP;
+    const tk=v.km*tripCount;
     const rate=v.v==='機車'?rBike:rCar;
     const amt=tk*rate;
-    tCnt+=v.cnt*ROUND_TRIP; tKm+=tk; tAmt+=amt;
+    tCnt+=tripCount; tKm+=tk; tAmt+=amt;
     rows2.push([v.from,v.to,v.v,v.km,v.cnt*ROUND_TRIP,Math.round(tk*100)/100,Math.round(amt)]);
   }
   rows2.push([],['總計','','','',tCnt,Math.round(tKm*100)/100,Math.round(tAmt)],[],
@@ -741,7 +744,7 @@ function printReport() {
   let tbody='',tCnt=0,tKm=0,tAmt=0;
   for(const [k,v] of Object.entries(agg)) {
     const tk=v.km*v.cnt*ROUND_TRIP, rate=v.v==='機車'?rBike:rCar, amt=tk*rate;
-    tCnt+=v.cnt*ROUND_TRIP; tKm+=tk; tAmt+=amt;
+    tCnt+=tripCount; tKm+=tk; tAmt+=amt;
     tbody+=`<tr><td>${v.from}</td><td>${v.to}</td><td>${v.v}</td><td>${v.km}</td><td>${v.cnt}</td><td>${Math.round(tk*100)/100}</td><td>${Math.round(amt)}</td></tr>`;
   }
   
