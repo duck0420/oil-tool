@@ -755,12 +755,12 @@ function exportExcel() {
   allTrips.forEach(t=>rows1.push([t.date,APPLICANT,t.vehicle,t.from,t.to,t.cat,t.cnt||ROUND_TRIP,t.km,'']));
   
   // Sheet 2: 申請差旅費 — matches original pivot format
-  // Aggregate: from|to|km → {car:{cnt,km}, bike:{cnt,km}}
+  // Aggregate by from+to only (ignore floating km)
   const agg={};
   allTrips.forEach(t=>{
     const count = t.cnt || ROUND_TRIP;
-    const k=`${t.from}|||${t.to}|||${t.km}`;
-    if(!agg[k]) agg[k]={from:t.from,to:t.to,km:t.km,carC:0,carK:0,bikeC:0,bikeK:0};
+    const k=`${t.from}|||${t.to}`;
+    if(!agg[k]) agg[k]={from:t.from,to:t.to,carC:0,carK:0,bikeC:0,bikeK:0};
     if(t.vehicle==='汽車'){agg[k].carC+=count;agg[k].carK+=t.km*count;}
     else{agg[k].bikeC+=count;agg[k].bikeK+=t.km*count;}
   });
@@ -770,15 +770,14 @@ function exportExcel() {
   rows2.push([]);rows2.push(['姓名',APPLICANT]);
   rows2.push(['','','','交通工具','資料','','','','']);
   rows2.push(['','','','汽車','','機車','','','']);
-  rows2.push(['起點/地點名稱','迄點/地點名稱','里程數','1.次數','2.里程數','1.次數','2.里程數','','']);
+  rows2.push(['起點/地點名稱','迄點/地點名稱','','1.次數','2.里程數','1.次數','2.里程數','','']);
   
   let tCarC=0,tCarK=0,tBikeC=0,tBikeK=0;
   for(let i=0;i<routes.length;i++){
     const v=routes[i];
     tCarC+=v.carC;tCarK+=v.carK;tBikeC+=v.bikeC;tBikeK+=v.bikeK;
     const fd=(i>0&&routes[i-1].from===v.from)?'':v.from;
-    const td=(i>0&&routes[i-1].from===v.from&&routes[i-1].to===v.to)?'':v.to;
-    rows2.push([fd,td,v.km,v.carC||'',Math.round(v.carK*100)/100||'',v.bikeC||'',Math.round(v.bikeK*100)/100||'','']);
+    rows2.push([fd,v.to,'',v.carC||'',Math.round(v.carK*100)/100||'',v.bikeC||'',Math.round(v.bikeK*100)/100||'','']);
   }
   rows2.push([]);
   rows2.push(['總計','','',tCarC,Math.round(tCarK*100)/100,tBikeC,Math.round(tBikeK*100)/100,'','']);
