@@ -321,11 +321,28 @@ const TEMPLATE_SECOND = [ // 下半月 16-31
 
 function getTemplate(date) {
   const d = parseInt(date.slice(-2));
-  const tmpl = d <= 15 ? TEMPLATE_FIRST : TEMPLATE_SECOND;
-  return tmpl.map(s => { 
-    const maxUp = s.to === '台中辦公室' ? 2 : 7;
-    return {...s, km: floatKm(date, s.km, maxUp)};
-  });
+  const isFirstHalf = d <= 15;
+  const person = APPLICANT;
+  
+  if (person === '游竣皓') {
+    // 游竣皓: 上: 陽明安舫中櫃 6.3km, 下: 龍鑫國耀中櫃 7.9km
+    const to = isFirstHalf ? '陽明、安舫、中櫃' : '龍鑫、國耀、中櫃';
+    const base = isFirstHalf ? 6.3 : 7.9;
+    return [
+      {from:'關務署台中關', to, km: floatKm(date, base, 7), cat:'換單、櫃場作業'},
+      {from:'關務署台中關', to, km: floatKm(date, base, 7), cat:'換單、櫃場作業'},
+      {from:'關務署台中關', to:'台中辦公室', km: floatKm(date, 19, 2), cat:'回公司'},
+    ];
+  }
+  
+  // 吳仕緯: 上: 龍鑫國耀建新31W 15km, 下: 陽明安舫建新31W 14km
+  const to = isFirstHalf ? '龍鑫、國耀、建新、31W' : '陽明、安舫、建新、31W';
+  const base = isFirstHalf ? 15 : 14;
+  return [
+    {from:'關務署台中關', to, km: floatKm(date, base, 7), cat:'換單、櫃場作業'},
+    {from:'關務署台中關', to, km: floatKm(date, base, 7), cat:'換單、櫃場作業'},
+    {from:'關務署台中關', to:'台中辦公室', km: floatKm(date, 19, 2), cat:'回公司'},
+  ];
 }
 const MILEAGE = {
   '台中分公司|關務署台中關':{機車:20.2,汽車:20.2},
