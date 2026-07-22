@@ -204,6 +204,7 @@ body{font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',system-ui,sans-se
   <div class="btn-row">
     <button class="btn btn-sm btn-outline" onclick="addSegment('end')">➕ 加入終點</button>
     <button class="btn btn-sm btn-outline" onclick="resetDayToTemplate()">🔄 重設為預設路線</button>
+    <button class="btn btn-sm btn-outline" onclick="resetMonth()">🔄 重整全月</button>
   </div>
 </div>
 
@@ -625,6 +626,25 @@ function removeSeg(idx) {
   selData = getDay(selDate);
   renderEditor();
   renderCalendar();
+}
+
+function resetMonth() {
+  if(!confirm('確定重整整月為新格式？所有已存資料會被蓋掉。')) return;
+  const y=curY, m=curM;
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  let count = 0;
+  for(let d=1;d<=daysInMonth;d++){
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(y,m,d).getDay();
+    if(dow===0||dow===6) continue;
+    if(TW_HOLIDAYS[ds]) continue;
+    setDay(ds, {enabled:true, vehicle: getDefaultVehicle(), segments: getTemplate(ds)});
+    count++;
+  }
+  selData = getDay(selDate);
+  renderCalendar();
+  renderEditor();
+  toast('✅ 已重整 '+count+' 個工作天');
 }
 
 function resetDayToTemplate() {
