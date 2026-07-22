@@ -292,22 +292,40 @@ function personKey(k) { return `oil_${APPLICANT}_${k}`; }
 function getDefaultVehicle() { return APPLICANT === '游竣皓' ? '機車' : '汽車'; }
 
 // Default daily template — 里程不分汽機車，距離相同
-const TEMPLATE = [
-  {from:'台中分公司',to:'關務署台中關',km:20.2,cat:'總部至海關文件'},
-  {from:'關務署台中關',to:'陽明海運梧棲辦公室',km:1.7,cat:'查看有無文件可取回'},
-  {from:'陽明海運梧棲辦公室',to:'安舫船務',km:0.5,cat:'查看有無文件可取回'},
-  {from:'安舫船務',to:'建中船務',km:0.26,cat:'查看有無文件可取回'},
-  {from:'建中船務',to:'龍鑫船務',km:0.026,cat:'查看有無文件可取回'},
-  {from:'龍鑫船務',to:'國耀船務',km:0.55,cat:'查看有無文件可取回'},
-  {from:'國耀船務',to:'顗泰船務',km:1,cat:'查看有無文件可取回'},
-  {from:'顗泰船務',to:'關務署台中關',km:1,cat:'查看有無文件可取回'},
-  {from:'關務署台中關',to:'31碼頭',km:3.6,cat:'櫃場作業'},
-  {from:'31碼頭',to:'32碼頭',km:1.2,cat:'櫃場作業'},
-  {from:'32碼頭',to:'34碼頭',km:0.6,cat:'櫃場作業'},
-  {from:'34碼頭',to:'關務署台中關',km:3.3,cat:'回海關'},
+// Daily templates — condensed 3-row format
+// Seeded random for consistent km float per day
+function seededRandom(seed) {
+  let s = seed;
+  return function() { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+}
+function floatKm(date, base, maxUp) {
+  const seed = date.split('-').reduce((a,b)=>a+parseInt(b||0),0);
+  const rng = seededRandom(seed);
+  const up = Math.round(rng() * maxUp * 10) / 10;
+  const rare = rng() < 0.08 ? 1 : 0; // 8% chance -1km
+  return Math.round((base + up - rare) * 10) / 10;
+}
+
+const TEMPLATE_FIRST = [ // 上半月 1-15
+  {from:'關務署台中關', to:'龍鑫、國耀、建新、31W', km:15, cat:'換單、櫃場作業'},
+  {from:'關務署台中關', to:'龍鑫、國耀、建新、31W', km:15, cat:'換單、櫃場作業'},
+  {from:'關務署台中關', to:'台中辦公室', km:19, cat:'回公司'},
 ];
 
-// Mileage DB — same for both vehicles, distance doesn't change
+const TEMPLATE_SECOND = [ // 下半月 16-31
+  {from:'關務署台中關', to:'陽明、安舫、建新、31W', km:14, cat:'換單、櫃場作業'},
+  {from:'關務署台中關', to:'陽明、安舫、建新、31W', km:14, cat:'換單、櫃場作業'},
+  {from:'關務署台中關', to:'台中辦公室', km:19, cat:'回公司'},
+];
+
+function getTemplate(date) {
+  const d = parseInt(date.slice(-2));
+  const tmpl = d <= 15 ? TEMPLATE_FIRST : TEMPLATE_SECOND;
+  return tmpl.map(s => { 
+    const maxUp = s.to === '台中辦公室' ? 2 : 7;
+    return {...s, km: floatKm(date, s.km, maxUp)};
+  });
+}
 const MILEAGE = {
   '台中分公司|關務署台中關':{機車:20.2,汽車:20.2},
   '關務署台中關|陽明海運梧棲辦公室':{機車:1.7,汽車:1.7},
@@ -343,7 +361,7 @@ const MILEAGE = {
   '關務署台中關|華城重電':{機車:2,汽車:2},
 };
 const LOCATIONS = [...new Set(Object.keys(MILEAGE).flatMap(k=>k.split('|')))].sort();
-const CATEGORIES = ['銀行背書','送報單','送帳單','拿稅單','銀行繳稅','送稅單','取快遞文件','取送廠驗准單','拿退帳單','總部至海關文件','海關至總部文件','取封條','送封條','送光碟','取送報廢清冊','貨櫃運送單白聯','OP給廠商文件','廠商給OP文件','業務給廠商文件','廠商給海關之文件','送異常單','抓線扣稅單收據','列印報單','送桌曆 筆記本','查看有無文件可取回','發進口文件給OP','edi收據','進口證明聯','送空白貨櫃運送單','櫃場繳費','C3驗貨','櫃場作業','回海關'];
+const CATEGORIES = ['銀行背書','送報單','送帳單','拿稅單','銀行繳稅','送稅單','取快遞文件','取送廠驗准單','拿退帳單','總部至海關文件','海關至總部文件','取封條','送封條','送光碟','取送報廢清冊','貨櫃運送單白聯','OP給廠商文件','廠商給OP文件','業務給廠商文件','廠商給海關之文件','送異常單','抓線扣稅單收據','列印報單','送桌曆 筆記本','查看有無文件可取回','發進口文件給OP','edi收據','進口證明聯','送空白貨櫃運送單','櫃場繳費','C3驗貨','換單、櫃場作業','回公司','回海關'];
 const ROUND_TRIP = 2; // 每次來回算 2 趟. 台中分公司→關務署台中關例外只算1趟
 
 // Taiwan 2026-2027 holidays
@@ -438,7 +456,7 @@ function getDay(date) {
   const isWeekend = dow===0||dow===6;
   const isHoliday = !!TW_HOLIDAYS[date];
   const enabled = !isWeekend && !isHoliday;
-  return {enabled, vehicle: getDefaultVehicle(), segments: enabled ? JSON.parse(JSON.stringify(TEMPLATE)) : []};
+  return {enabled, vehicle: getDefaultVehicle(), segments: enabled ? getTemplate(date) : []};
 }
 
 function setDay(date, data) {
@@ -610,7 +628,7 @@ function removeSeg(idx) {
 }
 
 function resetDayToTemplate() {
-  selData.segments = JSON.parse(JSON.stringify(TEMPLATE));
+  selData.segments = getTemplate(selDate);
   selData.enabled = true;
   setDay(selDate, selData);
   selData = getDay(selDate);
@@ -622,7 +640,7 @@ function resetDayToTemplate() {
 function toggleDay() {
   selData.enabled = !selData.enabled;
   if(selData.enabled && (!selData.segments||selData.segments.length===0)) {
-    selData.segments = JSON.parse(JSON.stringify(TEMPLATE));
+    selData.segments = getTemplate(selDate);
     selData.vehicle = getDefaultVehicle();
   }
   setDay(selDate, selData);
