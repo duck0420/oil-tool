@@ -655,7 +655,8 @@ function resetMonth() {
     const dow = new Date(y,m,d).getDay();
     if(dow===0||dow===6) continue;
     if(TW_HOLIDAYS[ds]) continue;
-    setDay(ds, {enabled:true, vehicle: getDefaultVehicle(), segments: getTemplate(ds)});
+    const existing = getDay(ds);
+    setDay(ds, {enabled:true, vehicle: existing.vehicle || getDefaultVehicle(), segments: getTemplate(ds)});
     count++;
   }
   selData = getDay(selDate);
