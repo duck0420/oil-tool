@@ -790,7 +790,15 @@ function exportExcel() {
   const ws2=XLSX.utils.aoa_to_sheet(rows2);
   ws1['!cols']=[{wch:12},{wch:10},{wch:8},{wch:22},{wch:22},{wch:18},{wch:6},{wch:10},{wch:15}];
   ws2['!cols']=[{wch:22},{wch:22},{wch:8},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10}];
+    ws1['!merges'] = [{s:{r:0,c:0}, e:{r:0,c:8}}]; // 外勤工作報表 title
   XLSX.utils.book_append_sheet(wb,ws1,'外勤工作表');
+    // Merged cells for professional look
+  ws2['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:7}},  // spacer row
+    {s:{r:2,c:3}, e:{r:2,c:4}},  // 交通工具
+    {s:{r:3,c:3}, e:{r:3,c:4}},  // 汽車
+    {s:{r:3,c:5}, e:{r:3,c:6}},  // 機車
+  ];
   XLSX.utils.book_append_sheet(wb,ws2,'申請差旅費');
   XLSX.writeFile(wb,`${curY}年${curM+1}月外勤工作報表_${APPLICANT}.xlsx`);
   toast('✅ 已匯出 Excel','success');
