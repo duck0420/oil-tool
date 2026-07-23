@@ -788,11 +788,9 @@ function exportExcel() {
   const wb=XLSX.utils.book_new();
   const ws1=XLSX.utils.aoa_to_sheet(rows1);
   const ws2=XLSX.utils.aoa_to_sheet(rows2);
-  ws1['!cols']=[{wch:12},{wch:10},{wch:8},{wch:22},{wch:22},{wch:18},{wch:6},{wch:10},{wch:15}];
-  ws2['!cols']=[{wch:22},{wch:22},{wch:8},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10}];
-    ws1['!merges'] = [{s:{r:0,c:0}, e:{r:0,c:8}}]; // 外勤工作報表 title
-  XLSX.utils.book_append_sheet(wb,ws1,'外勤工作表');
-    // Merged cells for professional look
+  ws1['!cols']=[{wch:12},{wch:10},{wch:8},{wch:24},{wch:24},{wch:18},{wch:6},{wch:10},{wch:15}];
+  ws2['!cols']=[{wch:24},{wch:24},{wch:6},{wch:10},{wch:12},{wch:10},{wch:12},{wch:10}];
+  ws1['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
   ws2['!merges'] = [
     {s:{r:0,c:0}, e:{r:0,c:7}},  // spacer row
     {s:{r:2,c:3}, e:{r:2,c:4}},  // 交通工具
@@ -800,6 +798,15 @@ function exportExcel() {
     {s:{r:3,c:5}, e:{r:3,c:6}},  // 機車
   ];
   XLSX.utils.book_append_sheet(wb,ws2,'申請差旅費');
+  // Cell styles
+  const hdr={font:{bold:true,sz:11},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:{top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}},fill:{fgColor:{rgb:'F5F0E8'}}};
+  const cen={alignment:{horizontal:'center',vertical:'center'},border:{top:{style:'thin'},bottom:{style:'thin'},left:{style:'thin'},right:{style:'thin'}}};
+  function ss(ws,r,c,s){const ref=XLSX.utils.encode_cell({r,c});if(!ws[ref])ws[ref]={};ws[ref].s=s;}
+  for(let c=0;c<9;c++)ss(ws1,1,c,hdr);
+  for(let c=0;c<8;c++)ss(ws2,4,c,hdr);
+  for(let r=5;r<rows2.length;r++)for(let c=0;c<8;c++){if(!ws2[XLSX.utils.encode_cell({r,c})]||!ws2[XLSX.utils.encode_cell({r,c})].s)ss(ws2,r,c,cen);}
+  XLSX.utils.book_append_sheet(wb,ws2,'申請差旅費');
+  XLSX.utils.book_append_sheet(wb,ws1,'外勤工作表');
   XLSX.writeFile(wb,`${curY}年${curM+1}月外勤工作報表_${APPLICANT}.xlsx`);
   toast('✅ 已匯出 Excel','success');
 }
