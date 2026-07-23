@@ -717,9 +717,9 @@ function renderStats() {
   document.getElementById('monthStats').innerHTML=`
     <div class="stat-card"><div class="val">${workDays}</div><div class="lbl">工作天數</div></div>
     <div class="stat-card"><div class="val">${tripSegs}</div><div class="lbl">行程段數</div></div>
-    <div class="stat-card"><div class="val gold">${totalKm}</div><div class="lbl">總里程 km</div></div>
-    <div class="stat-card"><div class="val gold">${bikeKm}</div><div class="lbl">🏍️ 機車 km</div></div>
-    <div class="stat-card"><div class="val gold">${carKm}</div><div class="lbl">🚗 汽車 km</div></div>
+    <div class="stat-card"><div class="val gold">${Math.round(totalKm)}</div><div class="lbl">總里程 km</div></div>
+    <div class="stat-card"><div class="val gold">${Math.round(bikeKm)}</div><div class="lbl">🏍️ 機車 km</div></div>
+    <div class="stat-card"><div class="val gold">${Math.round(carKm)}</div><div class="lbl">🚗 汽車 km</div></div>
     <div class="stat-card"><div class="val green">$${money.toFixed(0)}</div><div class="lbl">💰 預估油資</div></div>
   `;
 }
