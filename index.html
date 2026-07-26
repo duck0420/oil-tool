@@ -68,7 +68,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang TC'
 .card .date-title { font-size: 1rem; font-weight: 700; color: var(--accent); }
 
 /* Segment Editor */
-.segment { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--border); position: relative; }
+.segment { display: flex; align-items: center; gap: 6px; padding: 10px 0; border-bottom: 0.5px solid var(--border); position: relative; }
 .segment:last-child { border-bottom: none; }
 .segment .seg-body { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .segment select, .segment input { padding: 7px 10px; background: var(--card2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.82rem; outline: none; font-family: inherit; }
@@ -159,8 +159,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang TC'
             <option value="游竣皓">游竣皓</option>
     </select>
     <button class="btn btn-sm btn-outline" onclick="showHelp()" title="使用說明">?</button>
-    <button class="btn btn-sm btn-outline" onclick="syncNow()" title="手動同步到雲端">☁️</button>
-    <button class="btn btn-sm btn-outline" onclick="showSettings()">⚙️</button>
+        <button class="btn btn-sm btn-outline" onclick="syncNow()" title="手動同步到雲端">同步</button>
+        <button class="btn btn-sm btn-outline" onclick="showSettings()">設定</button>
     <button class="btn btn-sm btn-primary" onclick="exportExcel()">匯出</button>
   </div>
 </div>
