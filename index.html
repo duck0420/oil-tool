@@ -152,16 +152,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang TC'
 <body>
 
 <div class="bar">
-  <div><span class="title">☕ 油資申請</span><span class="sub" id="personLabel">吳仕緯</span></div>
+  <div><span class="title">油資申請</span><span class="sub" id="personLabel">吳仕緯</span></div>
   <div style="display:flex;gap:6px;align-items:center">
     <select id="personSelect" onchange="switchPerson(this.value)" style="padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:0.8rem;cursor:pointer;font-family:inherit">
-      <option value="吳仕緯">👤 吳仕緯</option>
-      <option value="游竣皓">👤 游竣皓</option>
+      <option value="吳仕緯">吳仕緯</option>
+            <option value="游竣皓">游竣皓</option>
     </select>
     <button class="btn btn-sm btn-outline" onclick="showHelp()" title="使用說明">?</button>
     <button class="btn btn-sm btn-outline" onclick="syncNow()" title="手動同步到雲端">☁️</button>
     <button class="btn btn-sm btn-outline" onclick="showSettings()">⚙️</button>
-    <button class="btn btn-sm btn-primary" onclick="exportExcel()">📥 匯出</button>
+    <button class="btn btn-sm btn-primary" onclick="exportExcel()">匯出</button>
   </div>
 </div>
 
