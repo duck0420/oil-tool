@@ -89,6 +89,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang TC'
 .btn-primary:hover { background: var(--accent2); }
 .btn-outline { background: var(--card); border: 1.5px solid var(--border); color: var(--text); }
 .btn-outline:hover { border-color: var(--accent); background: var(--accent-light); }
+.btn-icon { width: 32px; height: 32px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid transparent; color: var(--text-secondary); cursor: pointer; transition: all 0.3s cubic-bezier(0.16,1,0.3,1); }
+.btn-icon:hover { background: var(--accent-soft); color: var(--accent); transform: rotate(60deg); }
+.btn-icon svg { transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }
 .btn-sm { padding: 5px 12px; font-size: 0.75rem; border-radius: 8px; }
 .btn-danger { color: var(--red); border-color: var(--red); }
 .btn-danger:hover { background: #fce8e3; }
@@ -114,8 +117,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang TC'
 .toggle.on::after { transform: translateX(19px); }
 
 /* Modal */
-.modal-bg { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(61,46,28,0.3);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);}
-.modal{background:var(--card);border-radius:var(--radius);padding:24px;max-width:420px;width:100%;box-shadow:0 4px 24px rgba(61,46,28,0.12);border:1px solid var(--border);max-height:90vh;overflow-y:auto}
+.modal-bg { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:opacity 0.35s cubic-bezier(0.16,1,0.3,1),visibility 0.35s}
+.modal-bg.show{opacity:1;visibility:visible}
+.modal{background:var(--card);border-radius:16px;padding:24px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.15);border:0.5px solid var(--border);max-height:90vh;overflow-y:auto;transform:scale(0.92) translateY(12px);transition:transform 0.4s cubic-bezier(0.16,1,0.3,1)}
+.modal-bg.show .modal{transform:scale(1) translateY(0)}
 .modal h3{margin-bottom:12px;font-size:1rem}
 .modal input{padding:8px 12px;width:100%;border:1px solid var(--border);border-radius:8px;background:var(--card2);font-size:0.9rem}
 
@@ -160,7 +165,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang TC'
     </select>
     <button class="btn btn-sm btn-outline" onclick="showHelp()" title="使用說明">?</button>
         <button class="btn btn-sm btn-outline" onclick="syncNow()" title="手動同步到雲端">同步</button>
-        <button class="btn btn-sm btn-outline" onclick="showSettings()">設定</button>
+        <button class="btn btn-sm btn-icon" onclick="showSettings()" title="設定">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
     <button class="btn btn-sm btn-primary" onclick="exportExcel()">匯出</button>
   </div>
 </div>
@@ -225,8 +232,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang TC'
 <div class="print-area" id="printArea"></div>
 
 <!-- Help Modal -->
-<div class="modal-bg hidden" id="helpModal">
-<div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;font-size:0.85rem;line-height:1.7">
+<div class="modal-bg hidden" id="helpModal" onclick="closeHelp()">
+<div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;font-size:0.85rem;line-height:1.7" onclick="event.stopPropagation()">
 <h3>📖 使用說明</h3>
 
 <p><strong>🖊️ 每日登錄</strong><br>
@@ -259,8 +266,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang TC'
   <button class="btn btn-sm btn-primary" onclick="closeHelp()">知道了</button>
 </div>
 </div></div>
-<div class="modal-bg hidden" id="settingsModal">
-<div class="modal">
+<div class="modal-bg hidden" id="settingsModal" onclick="closeSettings()">
+<div class="modal" onclick="event.stopPropagation()">
 <h3>⚙️ 設定</h3>
 <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">機車費率 (元/公里)</label>
 <input type="number" id="rateBike" step="0.1" value="4" onchange="saveCfg()" style="margin-bottom:10px">
@@ -848,8 +855,8 @@ function printReport() {
 }
 
 // ============ SETTINGS ============
-function showHelp(){ document.getElementById('helpModal').classList.remove('hidden'); }
-function closeHelp(){ document.getElementById('helpModal').classList.add('hidden'); }
+function showHelp(){ const m=document.getElementById('helpModal'); m.classList.remove('hidden'); requestAnimationFrame(()=>m.classList.add('show')); }
+function closeHelp(){ const m=document.getElementById('helpModal'); m.classList.remove('show'); setTimeout(()=>m.classList.add('hidden'),350); }
 
 function showSettings() {
   const cfg=loadCfg();
@@ -858,8 +865,9 @@ function showSettings() {
   document.getElementById('customHolidays').value=(cfg.customHolidays||[]).join(',');
   document.getElementById('syncStatus').textContent = _db ? '✅ 已連線，自動同步中' : '⚠️ Firebase 未連線';
   document.getElementById('settingsModal').classList.remove('hidden');
+  requestAnimationFrame(()=>document.getElementById('settingsModal').classList.add('show'));
 }
-function closeSettings(){document.getElementById('settingsModal').classList.add('hidden');renderStats();}
+function closeSettings(){ const m=document.getElementById('settingsModal'); m.classList.remove('show'); setTimeout(()=>m.classList.add('hidden'),350); renderStats(); }
 function saveCfg(){
   saveCfgData({
     rateBike:document.getElementById('rateBike').value,
