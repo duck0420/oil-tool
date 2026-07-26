@@ -9,19 +9,19 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
 :root {
-  --bg: #faf6f0; --card: #fffdf7; --card2: #f8f2e8;
-  --border: #e5d9c4; --text: #3d2e1c; --muted: #a89880;
-  --accent: #c4963c; --accent2: #d4a84b; --accent-light: #f5e8cf;
-  --green: #7a9a6e; --orange: #d4956a; --red: #c47360;
-  --holiday-bg: #faf0e4; --weekend-bg: #f3ede4;
-  --today-bg: #efe0c8; --workday-bg: #fefcf7;
-  --bike: #8b7aa0; --car: #d4956a;
-  --shadow: 0 1px 3px rgba(61,46,28,0.06);
+  --bg: #f7f3ec; --card: #fefdfa; --card2: #f9f4eb;
+  --border: #e3dbcb; --text: #2c2416; --muted: #9b8d78;
+  --accent: #b8860b; --accent2: #9a7009; --accent-light: #f5ebd3;
+  --green: #5b8c5a; --orange: #c07a4a; --red: #b85450;
+  --holiday-bg: #faf4ea; --weekend-bg: #f5efe6;
+  --today-bg: #efe3cf; --workday-bg: #fefcf8;
+  --bike: #7b6b8a; --car: #c07a4a;
+  --shadow: 0 1px 3px rgba(44,36,22,0.05), 0 1px 2px rgba(44,36,22,0.03);
   --radius: 14px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;min-height:100vh;padding-bottom:40px}
-.bar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);background:rgba(255,253,247,0.92)}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang TC','Microsoft JhengHei',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;min-height:100vh;padding-bottom:40px;letter-spacing:-0.01em}
+.bar{background:rgba(254,253,250,0.88);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px)}
 .bar .title{font-size:1.1rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
 .bar .sub{font-size:0.8rem;color:var(--muted)}
 .main{max-width:800px;margin:0 auto;padding:16px}
