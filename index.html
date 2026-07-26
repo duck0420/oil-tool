@@ -47,7 +47,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang TC'
 .cal-cell.holiday { color: var(--red); background: var(--holiday-bg); }
 .cal-cell.today { font-weight: 800; }
 .cal-cell.today .num::after { content:''; position:absolute; bottom:-2px; left:50%; transform:translateX(-50%); width:5px; height:5px; border-radius:50%; background:var(--accent); }
-.cal-cell.active { background: var(--accent); color: #fff; border-radius: 10px; }
+.cal-cell.active { background: var(--accent); color: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(184,134,11,0.25); }
 .cal-cell.active.weekend, .cal-cell.active.holiday { background: var(--accent); color: #fff; }
 .cal-cell .badge { position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
 .cal-cell .badge.off { background: var(--red); opacity: 0.5; }
@@ -65,7 +65,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang TC'
 .legend .dot.wknd { background: var(--muted); }
 
 /* Card */
-.card { background: var(--card); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+.card { background: var(--card); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); border: 0.5px solid var(--border); }
 .card h3 { font-size: 0.95rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 .card .date-title { font-size: 1rem; font-weight: 700; color: var(--accent); }
 
@@ -85,7 +85,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang TC'
 .insert-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 
 /* Buttons */
-.btn { padding: 9px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.15s; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+.btn { padding: 9px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.2s cubic-bezier(0.16,1,0.3,1); font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+.btn:active { transform: scale(0.97); }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent2); }
 .btn-outline { background: var(--card); border: 1.5px solid var(--border); color: var(--text); }
